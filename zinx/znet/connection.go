@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"net"
+	"zinx_server/zinx/utils"
 	"zinx_server/zinx/ziface"
 )
 
@@ -19,21 +20,25 @@ type Connection struct {
 	//当前的链接状态
 	isClosed bool
 
-	//当前链接所绑定的处理业务方式API
-	handleAPI ziface.HandleFunc
+	// //当前链接所绑定的处理业务方式API
+	// handleAPI ziface.HandleFunc
 
 	//告知当前链接已经退出/停止的channel
 	ExitChan chan bool
+
+	//该链接处理的方法Router
+	Router ziface.IRouter
 }
 
 // 初始化链接模块的方法
-func NewConnection(conn *net.TCPConn, connID uint32, callback_api ziface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router ziface.IRouter) *Connection {
 	c := &Connection{
-		Conn:      conn,
-		ConnID:    connID,
-		handleAPI: callback_api,
-		isClosed:  false,
-		ExitChan:  make(chan bool, 1),
+		Conn:   conn,
+		ConnID: connID,
+		// handleAPI: callback_api,
+		isClosed: false,
+		ExitChan: make(chan bool, 1),
+		Router:   router,
 	}
 	return c
 }
@@ -45,19 +50,33 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		//读取客户端的数据到buf中，最大512字节
-		buf := make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		//读取客户端的数据到buf中
+		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("recv buf err", err)
 			continue
 		}
 
-		//调用当前链接所绑定的HandleAPI
-		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			fmt.Println("ConnID ", c.ConnID, " handle is error: ", err)
-			continue
+		// //调用当前链接所绑定的HandleAPI
+		// if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
+		// 	fmt.Println("ConnID ", c.ConnID, " handle is error: ", err)
+		// 	continue
+		// }
+
+		//得到当前conn数据的Request请求数据
+		req := Request{
+			conn: c,
+			data: buf,
 		}
+
+		go func(request ziface.IRequest) {
+			//从路由中，找到注册绑定的Conn对应的Router调用
+			c.Router.PreHandle(request)
+			c.Router.Handle(request)
+			c.Router.PostHandle(request)
+		}(&req)
+
 	}
 }
 
@@ -75,7 +94,7 @@ func (c *Connection) Stop() {
 	fmt.Println("Conn Stop()...ConnID = ", c.ConnID)
 
 	//如果当前链接已经关闭
-	if c.isClosed == true {
+	if c.isClosed {
 		return
 	}
 	c.isClosed = true

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"zinx_server/zinx/utils"
 	"zinx_server/zinx/ziface"
 )
 
@@ -17,6 +18,8 @@ type Server struct {
 	IP string
 	//服务器监听的端口
 	Port int
+	//当前的Server添加一个router，Server注册的链接对应的处理业务
+	Router ziface.IRouter
 }
 
 // 定义当前客户端链接的所绑定的handle api(目前这个handle是写死的，以后优化应该由用户自定义handle方法)
@@ -32,7 +35,14 @@ func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
 
 // 启动服务器
 func (s *Server) Start() {
-
+	fmt.Printf("[Zinx] Server Name : %s, Server Listener at IP: %s, Port: %d\n",
+		utils.GlobalObject.Name,
+		utils.GlobalObject.Host,
+		utils.GlobalObject.TCPPort)
+	fmt.Printf("[Zinx] Version : %s, MaxConn: %d, MaxPackageSize: %d\n",
+		utils.GlobalObject.Version,
+		utils.GlobalObject.MaxConn,
+		utils.GlobalObject.MaxPackageSize)
 	fmt.Printf("[Start] Server Listener at IP: %s, Port: %d, is starting\n", s.IP, s.Port)
 
 	go func() {
@@ -52,8 +62,7 @@ func (s *Server) Start() {
 
 		fmt.Println("Start Zinx server successed, ", s.Name, ", Listenning now...")
 
-		var cid uint32
-		cid = 0
+		var cid uint32 = 0
 
 		// 3 阻塞等待客户端连接，处理客户端连接业务
 		for {
@@ -66,7 +75,7 @@ func (s *Server) Start() {
 
 			//已经与客户端建立连接，做某些业务
 			//将处理新链接的业务方法和conn进行绑定，得到我们的链接模块
-			dealConn := NewConnection(conn, cid, CallBackToClient)
+			dealConn := NewConnection(conn, cid, s.Router)
 			cid++
 
 			//启动当前的链接业务处理
@@ -111,13 +120,20 @@ func (s *Server) Server() {
 	select {}
 }
 
+// 路由功能：给当前的服务注册一个路由方法，供客户端的链接处理使用
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+	fmt.Println("Add Router Successed!")
+}
+
 // 初始化Server模块的方法
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8999,
+		IP:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TCPPort,
+		Router:    nil,
 	}
 	return s
 }
