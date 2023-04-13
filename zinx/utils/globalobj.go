@@ -28,6 +28,7 @@ type GlobalObj struct {
 	MaxPackageSize   uint32 //当前框架数据包的最大值
 	WorkerPoolSize   uint32 //当前业务工作Worker池的worker数量（Worker工作池的队列大小）
 	MaxWorkerTaskLen uint32 //每个worker对应的消息队列的任务数量最大值
+	MaxMsgChanLen    uint32 //SendBuffMsg发送消息的缓冲最大长度
 	// MaxWorkerTaskLen uint32 //框架允许用户最多开辟多少个Worker（限定条件）
 }
 
@@ -60,6 +61,7 @@ func init() {
 		MaxPackageSize:   4096,
 		WorkerPoolSize:   10,
 		MaxWorkerTaskLen: 1024,
+		MaxMsgChanLen:    1024,
 	}
 
 	//应该尝试从conf/zinx.json去加载一些用户自定义的参数

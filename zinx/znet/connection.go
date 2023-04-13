@@ -31,6 +31,9 @@ type Connection struct {
 	//无缓冲管道，用于读写Goroutine之间的消息通信
 	msgChan chan []byte
 
+	//有缓冲管道，用于读写Goroutine之间的消息通信
+	msgBuffChan chan []byte
+
 	//消息的管理MsgID和对应的处理业务API关系
 	MsgHandler ziface.IMsgHandle
 
@@ -44,14 +47,15 @@ type Connection struct {
 // 初始化链接模块的方法
 func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandle) *Connection {
 	c := &Connection{
-		TcpServer:  server,
-		Conn:       conn,
-		ConnID:     connID,
-		isClosed:   false,
-		ExitChan:   make(chan bool, 1),
-		msgChan:    make(chan []byte),
-		MsgHandler: msgHandler,
-		property:   make(map[string]interface{}),
+		TcpServer:   server,
+		Conn:        conn,
+		ConnID:      connID,
+		isClosed:    false,
+		ExitChan:    make(chan bool, 1),
+		msgChan:     make(chan []byte),
+		msgBuffChan: make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		MsgHandler:  msgHandler,
+		property:    make(map[string]interface{}),
 	}
 	//将conn加入到ConnManager中
 	c.TcpServer.GetConnMgr().Add(c)
@@ -132,8 +136,19 @@ func (c *Connection) StartWriter() {
 		select {
 		case data := <-c.msgChan:
 			if _, err := c.Conn.Write(data); err != nil {
-				fmt.Println("Send data error: ", err)
+				fmt.Println("Send data Error:", err)
 				return
+			}
+		case data, ok := <-c.msgBuffChan:
+			if ok {
+				//有数据要写给客户端
+				if _, err := c.Conn.Write(data); err != nil {
+					fmt.Println("Send Buff Data Error:, ", err, " Conn Writer exit")
+					return
+				}
+			} else {
+				fmt.Println("msgBuffChan is Closed")
+				break
 			}
 		case <-c.ExitChan:
 			//代表Reader已经退出，此时Writer也要退出
@@ -213,6 +228,25 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 
 	//发送消息到绑定客户端
 	c.msgChan <- binaryMsg
+
+	return nil
+}
+
+// 提供一个SendMsg方法 将我们要发送给客户端的数据，先进行封包，再发送(有缓冲)
+func (c *Connection) SendBuffMsg(msgId uint32, data []byte) error {
+	if c.isClosed {
+		return errors.New("Connection closed when send buff msg")
+	}
+	//将data封包，并且发送
+	dp := NewDataPack()
+	msg, err := dp.Pack(NewMsgPackage(msgId, data))
+	if err != nil {
+		fmt.Println("Pack error msg id = ", msgId)
+		return errors.New("Pack error msg ")
+	}
+
+	//发送消息到绑定客户端
+	c.msgBuffChan <- msg
 
 	return nil
 }
