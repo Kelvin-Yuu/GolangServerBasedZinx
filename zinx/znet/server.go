@@ -131,7 +131,7 @@ func (s *Server) Server() {
 // 路由功能：给当前的服务注册一个路由方法，供客户端的链接处理使用
 func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 	s.MsgHandler.AddRouter(msgID, router)
-	fmt.Println("Add Router [MsgID=", msgID, "] Successed!")
+	fmt.Println("Add Router [MsgID =", msgID, "] Successed!")
 }
 
 // 获取当前server的连接管理器

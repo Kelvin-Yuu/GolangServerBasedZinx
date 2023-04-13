@@ -35,6 +35,7 @@ func (mh *MsgHandle) DoMsgHandle(request ziface.IRequest) {
 	handler, ok := mh.Apis[request.GetMsgId()]
 	if !ok {
 		fmt.Println("api msgID = ", request.GetMsgId(), " is NOT FOUND! Need Register!")
+		return
 	}
 
 	//2 根据MsgID调度对应的Router业务
@@ -53,7 +54,7 @@ func (mh *MsgHandle) AddRouter(msgID uint32, router ziface.IRouter) {
 
 	//2 添加msg与API的绑定关系
 	mh.Apis[msgID] = router
-	fmt.Println("Add api MsgID = ", msgID, " successed!")
+	fmt.Println("Add api MsgID =", msgID, " successed!")
 }
 
 // 启动一个Worker工作池（开启工作池的动作只能发生一次，一个框架只能有一个工作池）

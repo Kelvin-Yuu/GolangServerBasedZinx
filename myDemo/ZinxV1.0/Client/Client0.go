@@ -17,7 +17,7 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	//1 直接链接远程服务器，得到一个conn链接
-	conn, err := net.Dial("tcp", "127.0.0.1:7777")
+	conn, err := net.Dial("tcp", "0.0.0.0:7777")
 	if err != nil {
 		fmt.Println("Client start err, exit!", err)
 		return
