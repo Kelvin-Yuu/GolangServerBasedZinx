@@ -1,2 +1,3 @@
 /mmo_game/game_client/client_Data
 *.log
+conf/zinx.json
