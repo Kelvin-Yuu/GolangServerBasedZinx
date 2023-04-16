@@ -19,6 +19,9 @@ type IConnection interface {
 	//获取远程客户端的TCP状态（IP,Port)
 	RemoteAddr() net.Addr
 
+	//获取本地服务器的TCP状态（IP,Port）
+	LocalAddr() net.Addr
+
 	//发送数据，将数据发送给远程的客户端
 	SendMsg(msgId uint32, data []byte) error
 
@@ -33,7 +36,10 @@ type IConnection interface {
 
 	//移除链接属性
 	RemoveProperty(key string)
-}
 
-//定义一个处理链接业务的方法
-type HandleFunc func(*net.TCPConn, []byte, int) error
+	//判断当前链接是否存活
+	IsAlive() bool
+
+	//设置心跳检测器
+	SetHeartBeat(checker IHeartbeatChecker)
+}

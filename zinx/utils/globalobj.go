@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"io/ioutil"
+	"time"
 	"zinx_server/zinx/ziface"
 )
 
@@ -30,6 +31,8 @@ type GlobalObj struct {
 	MaxWorkerTaskLen uint32 //每个worker对应的消息队列的任务数量最大值
 	MaxMsgChanLen    uint32 //SendBuffMsg发送消息的缓冲最大长度
 	// MaxWorkerTaskLen uint32 //框架允许用户最多开辟多少个Worker（限定条件）
+
+	HeartbeatMax int //最长心跳检测间隔时间(单位：秒),超过改时间间隔，则认为超时，从配置文件读取
 }
 
 /*
@@ -50,6 +53,10 @@ func (g *GlobalObj) Reload() {
 	}
 }
 
+func (g *GlobalObj) HeartbeatMaxDuration() time.Duration {
+	return time.Duration(g.HeartbeatMax) * time.Second
+}
+
 // 提供一个init方法，初始化当前的GlobalObject
 func init() {
 	GlobalObject = &GlobalObj{
@@ -62,6 +69,7 @@ func init() {
 		WorkerPoolSize:   10,
 		MaxWorkerTaskLen: 1024,
 		MaxMsgChanLen:    1024,
+		HeartbeatMax:     10,
 	}
 
 	//应该尝试从conf/zinx.json去加载一些用户自定义的参数

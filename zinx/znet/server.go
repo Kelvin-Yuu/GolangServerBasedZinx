@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 	"zinx_server/zinx/utils"
 	"zinx_server/zinx/ziface"
 )
@@ -33,6 +34,9 @@ type Server struct {
 
 	//当前server销毁链接之前自动调用Hook函数
 	OnConnStop func(conn ziface.IConnection)
+
+	//心跳检测器
+	hc ziface.IHeartbeatChecker
 }
 
 // 定义当前客户端链接的所绑定的handle api(目前这个handle是写死的，以后优化应该由用户自定义handle方法)
@@ -162,18 +166,40 @@ func (s *Server) SetOnConnStop(hookFunc func(connection ziface.IConnection)) {
 	s.OnConnStop = hookFunc
 }
 
-// 调用OnConnStart hook函数方法
-func (s *Server) CallOnConnStart(conn ziface.IConnection) {
-	if s.OnConnStart != nil {
-		fmt.Println("----> Call OnConnStart()...")
-		s.OnConnStart(conn)
-	}
+// 得到该Server的连接创建时Hook函数
+func (s *Server) GetOnConnStart() func(ziface.IConnection) {
+	return s.OnConnStart
 }
 
-// 调用OnConnStop hook函数方法
-func (s *Server) CallOnConnStop(conn ziface.IConnection) {
-	if s.OnConnStop != nil {
-		fmt.Println("----> Call OnConnStop()...")
-		s.OnConnStop(conn)
+// 得到该Server的连接断开时的Hook函数
+func (s *Server) GetOnConnStop() func(ziface.IConnection) {
+	return s.OnConnStop
+}
+
+// 启动心跳检测
+func (s *Server) StartHeartBeat(interval time.Duration) {
+	checker := NewHeartbeatChecker(interval)
+
+	//添加心跳检测的路由
+	s.AddRouter(checker.MsgID(), checker.Router())
+
+	//server绑定心跳检测器
+	s.hc = checker
+}
+
+// 启动心跳检测(自定义回调)
+func (s *Server) StartHeartBeatWithOption(interval time.Duration, option *ziface.HeartBeatOption) {
+	checker := NewHeartbeatChecker(interval)
+
+	if option != nil {
+		checker.SetHeartbeatMsgFunc(option.MakeMsg)
+		checker.SetOnRemoteNotAlive(option.OnRemoteNotAlive)
+		checker.BindRouter(option.HeadBeatMsgID, option.Router)
 	}
+
+	//添加心跳检测的路由
+	s.AddRouter(checker.MsgID(), checker.Router())
+
+	//server绑定心跳检测器
+	s.hc = checker
 }
