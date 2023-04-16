@@ -185,18 +185,14 @@ func (c *Connection) Start() {
 func (c *Connection) Stop() {
 	fmt.Println("Conn Stop()...ConnID = ", c.ConnID)
 
-	//按照开发者传递进来的 销毁链接之前需要调用的处理业务，执行对应的hook函数
-	c.callOnConnStart()
-
 	//如果当前链接已经关闭SendMsg
 	if c.isClosed {
 		return
 	}
+	c.isClosed = true
 
-	// 关闭链接绑定的心跳检测器
-	if c.hc != nil {
-		c.hc.Stop()
-	}
+	//按照开发者传递进来的 销毁链接之前需要调用的处理业务，执行对应的hook函数
+	c.callOnConnStart()
 
 	//关闭socket链接
 	c.Conn.Close()
@@ -212,8 +208,6 @@ func (c *Connection) Stop() {
 	//回收资源
 	close(c.ExitChan)
 	close(c.msgChan)
-
-	c.isClosed = true
 }
 
 // 获取当前链接的绑定socket conn
