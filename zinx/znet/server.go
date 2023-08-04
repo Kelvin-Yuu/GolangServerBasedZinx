@@ -3,7 +3,9 @@ package znet
 import (
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"net"
+	"net/http"
 	"time"
 	"zinx_server/zinx/utils"
 	"zinx_server/zinx/ziface"
@@ -11,32 +13,61 @@ import (
 
 // iServer的接口实现，定义一个Server的服务器模块
 type Server struct {
-	//服务器的名称
+	// Name of the server (服务器的名称)
 	Name string
-
-	//服务器绑定的ip版本
+	//tcp4 or other
 	IPVersion string
-
-	//服务器监听的IP
+	// IP version (e.g. "tcp4") - 服务绑定的IP地址
 	IP string
-
-	//服务器监听的端口
+	// IP address the server is bound to (服务绑定的端口)
 	Port int
+	// 服务绑定的websocket 端口 (Websocket port the server is bound to)
+	WsPort int
+	// 服务绑定的kcp 端口 (kcp port the server is bound to)
+	KcpPort int
 
-	//当前server的消息管理模块，用来绑定MsgID和对应的处理业务API
-	MsgHandler ziface.IMsgHandle
+	// Current server's message handler module, used to bind MsgID to corresponding processing methods
+	// (当前Server的消息管理模块，用来绑定MsgID和对应的处理方法)
+	msgHandler ziface.IMsgHandle
 
-	//当前server的连接管理模块
-	ConnManager ziface.IConnManager
+	// Routing mode (路由模式)
+	RouterSlicesMode bool
 
-	//当前server创建链接之后自动调用Hook函数
-	OnConnStart func(conn ziface.IConnection)
+	// Current server's connection manager (当前Server的链接管理器)
+	ConnMgr ziface.IConnManager
 
-	//当前server销毁链接之前自动调用Hook函数
-	OnConnStop func(conn ziface.IConnection)
+	// Hook function called when a new connection is established
+	// (该Server的连接创建时Hook函数)
+	onConnStart func(conn ziface.IConnection)
 
-	//心跳检测器
+	// Hook function called when a connection is terminated
+	// (该Server的连接断开时的Hook函数)
+	onConnStop func(conn ziface.IConnection)
+
+	// Data packet encapsulation method
+	// (数据报文封包方式)
+	packet ziface.IDataPack
+
+	// Asynchronous capture of connection closing status
+	// (异步捕获链接关闭状态)
+	exitChan chan struct{}
+
+	//// Decoder for dealing with message fragmentation and reassembly
+	//// (断粘包解码器)
+	//decoder ziface.IDecoder
+
+	// Heartbeat checker
+	// (心跳检测器)
 	hc ziface.IHeartbeatChecker
+
+	// websocket
+	upgrader *websocket.Upgrader
+
+	// websocket connection authentication
+	websocketAuth func(r *http.Request) error
+
+	// connection id
+	cID uint64
 }
 
 // 定义当前客户端链接的所绑定的handle api(目前这个handle是写死的，以后优化应该由用户自定义handle方法)
@@ -64,7 +95,7 @@ func (s *Server) Start() {
 	go func() {
 
 		// 0 开启消息队列及Worker工作池
-		s.MsgHandler.StartWorkerPool()
+		s.msgHandler.StartWorkerPool()
 
 		// 1 获取一个TCP的Addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
@@ -94,7 +125,7 @@ func (s *Server) Start() {
 			}
 
 			//设置最大连接个数的判断，如果超过最大连接，则关闭此新的连接
-			if s.ConnManager.Len() >= utils.GlobalObject.MaxConn {
+			if s.ConnMgr.Len() >= utils.GlobalObject.MaxConn {
 				//TODO 给客户端响应一个超出最大连接的错误包
 				fmt.Println("Too many Connection, MaxConn=", utils.GlobalObject.MaxConn)
 				conn.Close()
@@ -103,7 +134,7 @@ func (s *Server) Start() {
 
 			//已经与客户端建立连接，做某些业务
 			//将处理新链接的业务方法和conn进行绑定，得到我们的链接模块
-			dealConn := NewConnection(s, conn, cid, s.MsgHandler)
+			dealConn := NewConnection(s, conn, cid, s.msgHandler)
 			cid++
 
 			//启动当前的链接业务处理
@@ -118,7 +149,7 @@ func (s *Server) Start() {
 func (s *Server) Stop() {
 	//TODO 将一些服务器的资源、状态或者一些已经开辟的链接信息，进行停止或者回收
 	fmt.Println("[STOP] Zinx server name ", s.Name)
-	s.ConnManager.ClearConn()
+	s.ConnMgr.ClearConn()
 }
 
 // 运行服务器
@@ -134,46 +165,46 @@ func (s *Server) Server() {
 
 // 路由功能：给当前的服务注册一个路由方法，供客户端的链接处理使用
 func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
-	s.MsgHandler.AddRouter(msgID, router)
+	s.msgHandler.AddRouter(msgID, router)
 	fmt.Println("Add Router [MsgID =", msgID, "] Successed!")
 }
 
 // 获取当前server的连接管理器
 func (s *Server) GetConnMgr() ziface.IConnManager {
-	return s.ConnManager
+	return s.ConnMgr
 }
 
 // 初始化Server模块的方法
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:        utils.GlobalObject.Name,
-		IPVersion:   "tcp4",
-		IP:          utils.GlobalObject.Host,
-		Port:        utils.GlobalObject.TCPPort,
-		MsgHandler:  NewMsgHandle(),
-		ConnManager: NewConnManager(),
+		Name:       utils.GlobalObject.Name,
+		IPVersion:  "tcp4",
+		IP:         utils.GlobalObject.Host,
+		Port:       utils.GlobalObject.TCPPort,
+		msgHandler: NewMsgHandle(),
+		ConnMgr:    NewConnManager(),
 	}
 	return s
 }
 
 // 注册OnConnStart hook函数方法
 func (s *Server) SetOnConnStart(hookFunc func(connection ziface.IConnection)) {
-	s.OnConnStart = hookFunc
+	s.onConnStart = hookFunc
 }
 
 // 注册OnConnStop hook函数方法
 func (s *Server) SetOnConnStop(hookFunc func(connection ziface.IConnection)) {
-	s.OnConnStop = hookFunc
+	s.onConnStop = hookFunc
 }
 
 // 得到该Server的连接创建时Hook函数
 func (s *Server) GetOnConnStart() func(ziface.IConnection) {
-	return s.OnConnStart
+	return s.onConnStart
 }
 
 // 得到该Server的连接断开时的Hook函数
 func (s *Server) GetOnConnStop() func(ziface.IConnection) {
-	return s.OnConnStop
+	return s.onConnStop
 }
 
 // 启动心跳检测
@@ -202,4 +233,12 @@ func (s *Server) StartHeartBeatWithOption(interval time.Duration, option *ziface
 
 	//server绑定心跳检测器
 	s.hc = checker
+}
+
+func (s *Server) SetWebsocketAuth(f func(r *http.Request) error) {
+	s.websocketAuth = f
+}
+
+func (s *Server) ServerName() string {
+	return s.Name
 }

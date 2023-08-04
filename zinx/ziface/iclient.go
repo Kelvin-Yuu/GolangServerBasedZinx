@@ -1,9 +1,12 @@
 package ziface
 
 /*
-	定义一个客户端接口
+定义一个客户端接口
 */
 type IClient interface {
+	// 重启客户端
+	Restart()
+
 	//启动客户端
 	Start()
 
