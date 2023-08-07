@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 	"time"
-	"zinx_server/zinx/utils"
+	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
 )
 
@@ -53,7 +53,7 @@ func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgH
 		isClosed:    false,
 		ExitChan:    make(chan bool, 1),
 		msgChan:     make(chan []byte),
-		msgBuffChan: make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		msgBuffChan: make(chan []byte, zconf.GlobalObject.MaxMsgChanLen),
 		MsgHandler:  msgHandler,
 		property:    make(map[string]interface{}),
 	}
@@ -118,7 +118,7 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 
-		if utils.GlobalObject.WorkerPoolSize > 0 {
+		if zconf.GlobalObject.WorkerPoolSize > 0 {
 			//已经开启了工作池机制，将消息发送给我Worker工作池处理
 			c.MsgHandler.SendMsgToTaskQueue(&req)
 		} else {
@@ -326,7 +326,7 @@ func (c *Connection) IsAlive() bool {
 	}
 
 	//检查连接最后一次活动时间，如果超出心跳间隔，则认为连接已经死亡
-	return time.Now().Sub(c.lastActivityTime) < utils.GlobalObject.HeartbeatMaxDuration()
+	return time.Now().Sub(c.lastActivityTime) < zconf.GlobalObject.HeartbeatMaxDuration()
 }
 
 // 更新连接最后活动时间

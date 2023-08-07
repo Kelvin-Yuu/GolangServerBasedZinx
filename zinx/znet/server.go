@@ -7,8 +7,9 @@ import (
 	"net"
 	"net/http"
 	"time"
-	"zinx_server/zinx/utils"
+	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
+	"zinx_server/zinx/zlog"
 )
 
 // iServer的接口实现，定义一个Server的服务器模块
@@ -83,14 +84,14 @@ func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
 
 // 启动服务器
 func (s *Server) Start() {
-	fmt.Printf("[Zinx] Server Name : %s, Server Listener at IP: %s, Port: %d\n",
-		utils.GlobalObject.Name,
-		utils.GlobalObject.Host,
-		utils.GlobalObject.TCPPort)
-	fmt.Printf("[Zinx] Version : %s, MaxConn: %d, MaxPackageSize: %d\n",
-		utils.GlobalObject.Version,
-		utils.GlobalObject.MaxConn,
-		utils.GlobalObject.MaxPackageSize)
+	zlog.Ins().InfoF("[Zinx] Server Name : %s, Server Listener at IP: %s, Port: %d\n",
+		zconf.GlobalObject.Name,
+		zconf.GlobalObject.Host,
+		zconf.GlobalObject.TCPPort)
+	zlog.Ins().InfoF("[Zinx] Version : %s, MaxConn: %d, MaxPackageSize: %d\n",
+		zconf.GlobalObject.Version,
+		zconf.GlobalObject.MaxConn,
+		zconf.GlobalObject.MaxPackageSize)
 
 	go func() {
 
@@ -125,9 +126,9 @@ func (s *Server) Start() {
 			}
 
 			//设置最大连接个数的判断，如果超过最大连接，则关闭此新的连接
-			if s.ConnMgr.Len() >= utils.GlobalObject.MaxConn {
+			if s.ConnMgr.Len() >= zconf.GlobalObject.MaxConn {
 				//TODO 给客户端响应一个超出最大连接的错误包
-				fmt.Println("Too many Connection, MaxConn=", utils.GlobalObject.MaxConn)
+				fmt.Println("Too many Connection, MaxConn=", zconf.GlobalObject.MaxConn)
 				conn.Close()
 				continue
 			}
@@ -177,10 +178,10 @@ func (s *Server) GetConnMgr() ziface.IConnManager {
 // 初始化Server模块的方法
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:       utils.GlobalObject.Name,
+		Name:       zconf.GlobalObject.Name,
 		IPVersion:  "tcp4",
-		IP:         utils.GlobalObject.Host,
-		Port:       utils.GlobalObject.TCPPort,
+		IP:         zconf.GlobalObject.Host,
+		Port:       zconf.GlobalObject.TCPPort,
 		msgHandler: NewMsgHandle(),
 		ConnMgr:    NewConnManager(),
 	}
@@ -205,6 +206,22 @@ func (s *Server) GetOnConnStart() func(ziface.IConnection) {
 // 得到该Server的连接断开时的Hook函数
 func (s *Server) GetOnConnStop() func(ziface.IConnection) {
 	return s.onConnStop
+}
+
+func (s *Server) GetPacket() ziface.IDataPack {
+	return s.packet
+}
+
+func (s *Server) SetPacket(packet ziface.IDataPack) {
+	s.packet = packet
+}
+
+func (s *Server) GetMsgHandler() ziface.IMsgHandle {
+	return s.msgHandler
+}
+
+func (s *Server) GetHeartBeat() ziface.IHeartbeatChecker {
+	return s.hc
 }
 
 // 启动心跳检测

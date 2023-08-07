@@ -3,7 +3,7 @@ package znet
 import (
 	"fmt"
 	"strconv"
-	"zinx_server/zinx/utils"
+	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
 )
 
@@ -24,8 +24,8 @@ type MsgHandle struct {
 func NewMsgHandle() *MsgHandle {
 	return &MsgHandle{
 		Apis:           make(map[uint32]ziface.IRouter),
-		TaskQueue:      make([]chan ziface.IRequest, utils.GlobalObject.WorkerPoolSize),
-		WorkerPoolSize: utils.GlobalObject.WorkerPoolSize,
+		TaskQueue:      make([]chan ziface.IRequest, zconf.GlobalObject.WorkerPoolSize),
+		WorkerPoolSize: zconf.GlobalObject.WorkerPoolSize,
 	}
 }
 
@@ -64,7 +64,7 @@ func (mh *MsgHandle) StartWorkerPool() {
 		//一个Worker被启动
 
 		//1 当前的worker对应的channel消息队列 开辟空间 第i个Worker，就用第i个TaskQueue
-		mh.TaskQueue[i] = make(chan ziface.IRequest, utils.GlobalObject.MaxWorkerTaskLen)
+		mh.TaskQueue[i] = make(chan ziface.IRequest, zconf.GlobalObject.MaxWorkerTaskLen)
 		//2 启动当前的Worker，阻塞等待消息从channel传递过来
 		go mh.startOneWorker(i, mh.TaskQueue[i])
 	}
