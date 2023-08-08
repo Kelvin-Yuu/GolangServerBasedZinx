@@ -91,7 +91,7 @@ func (s *Server) Start() {
 	zlog.Ins().InfoF("[Zinx] Version : %s, MaxConn: %d, MaxPackageSize: %d\n",
 		zconf.GlobalObject.Version,
 		zconf.GlobalObject.MaxConn,
-		zconf.GlobalObject.MaxPackageSize)
+		zconf.GlobalObject.MaxPacketSize)
 
 	go func() {
 
@@ -168,6 +168,27 @@ func (s *Server) Server() {
 func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 	s.msgHandler.AddRouter(msgID, router)
 	fmt.Println("Add Router [MsgID =", msgID, "] Successed!")
+}
+
+func (s *Server) AddRouterSlices(msgId uint32, router ...ziface.RouterHandler) ziface.IRouterSlices {
+	if !s.RouterSlicesMode {
+		panic("Server RouterSlicesMode is FALSE!! ")
+	}
+	return s.msgHandler.AddRouterSlices(msgId, router...)
+}
+
+func (s *Server) Group(start, end uint32, Handlers ...ziface.RouterHandler) ziface.IGroupRouterSlices {
+	if !s.RouterSlicesMode {
+		panic("Server RouterSlicesMode is FALSE!! ")
+	}
+	return s.msgHandler.Group(start, end, Handlers...)
+}
+
+func (s *Server) Use(Handlers ...ziface.RouterHandler) ziface.IRouterSlices {
+	if !s.RouterSlicesMode {
+		panic("Server RouterSlicesMode is FALSE!! ")
+	}
+	return s.msgHandler.Use(Handlers...)
 }
 
 // 获取当前server的连接管理器

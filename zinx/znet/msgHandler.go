@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
+	"zinx_server/zinx/zlog"
 )
 
 /* -------------------------------------------------------------------------- */
@@ -18,6 +19,8 @@ type MsgHandle struct {
 
 	//业务工作Worker池的worker数量
 	WorkerPoolSize uint32
+
+	RouterSlices *RouterSlices
 }
 
 // 初始化/创建MsgHandle方法
@@ -57,6 +60,39 @@ func (mh *MsgHandle) AddRouter(msgID uint32, router ziface.IRouter) {
 	fmt.Println("Add api MsgID =", msgID, " successed!")
 }
 
+// 切片路由添加
+func (mh *MsgHandle) AddRouterSlices(msgId uint32, handler ...ziface.RouterHandler) ziface.IRouterSlices {
+	mh.RouterSlices.AddHandler(msgId, handler...)
+	return mh.RouterSlices
+}
+
+func (mh *MsgHandle) Group(start, end uint32, Handlers ...ziface.RouterHandler) ziface.IGroupRouterSlices {
+	return NewGroup(start, end, mh.RouterSlices, Handlers...)
+}
+
+func (mh *MsgHandle) Use(Handlers ...ziface.RouterHandler) ziface.IRouterSlices {
+	mh.RouterSlices.Use(Handlers...)
+	return mh.RouterSlices
+}
+
+func (mh *MsgHandle) doMsgHandlerSlices(request ziface.IRequest, workerID int) {
+	defer func() {
+		if err := recover(); err != nil {
+			zlog.Ins().ErrorF("workerID: %d doMsgHandler panic: %v", workerID, err)
+		}
+	}()
+
+	msgId := request.GetMsgId()
+	handlers, ok := mh.RouterSlices.GetHandlers(msgId)
+	if !ok {
+		zlog.Ins().ErrorF("api msgID = %d is not FOUND!", request.GetMsgId())
+		return
+	}
+
+	request.BindRouterSlices(handlers)
+	request.RouterSlicesNext()
+}
+
 // 启动一个Worker工作池（开启工作池的动作只能发生一次，一个框架只能有一个工作池）
 func (mh *MsgHandle) StartWorkerPool() {
 	//根据workerPoolSize 分别开启Worker，每个Work用一个go来承载
@@ -72,14 +108,22 @@ func (mh *MsgHandle) StartWorkerPool() {
 
 // 启动一个Worker工作流程
 func (mh *MsgHandle) startOneWorker(workerID int, taskQueue chan ziface.IRequest) {
-	fmt.Println("WorkerID = ", workerID, " is Started...")
+	zlog.Ins().InfoF("WorkerID = %d is Started...", workerID)
 
 	//不断阻塞等待对应消息队列消息
 	for {
 		select {
 		//如果有消息过来，出列的就是一个客户端的Request，执行当前Request所绑定业务
 		case request := <-taskQueue:
-			mh.DoMsgHandle(request)
+			switch req := request.(type) {
+			case ziface.IRequest:
+				if !zconf.GlobalObject.RouterSlicesMode {
+					mh.DoMsgHandle(req)
+				} else if zconf.GlobalObject.RouterSlicesMode {
+					mh.doMsgHandlerSlices(req, workerID)
+				}
+			}
+			//mh.DoMsgHandle(request)
 		}
 	}
 }

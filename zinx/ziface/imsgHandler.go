@@ -10,6 +10,10 @@ type IMsgHandle interface {
 	//为消息添加具体的处理逻辑
 	AddRouter(msgID uint32, router IRouter)
 
+	AddRouterSlices(msgId uint32, handler ...RouterHandler) IRouterSlices
+	Group(start, end uint32, Handlers ...RouterHandler) IGroupRouterSlices
+	Use(Handlers ...RouterHandler) IRouterSlices
+
 	//启动Worker工作池
 	StartWorkerPool()
 

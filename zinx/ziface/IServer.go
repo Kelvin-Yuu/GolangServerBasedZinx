@@ -17,8 +17,14 @@ type IServer interface {
 	//路由功能：给当前的服务注册一个路由方法，供客户端的链接处理使用
 	AddRouter(msgID uint32, router IRouter)
 
-	//// 新版路由方式
-	//AddRouterSlices(msgID uint32, router ...RouterHandler) IRouterSlices
+	// 新版路由方式
+	AddRouterSlices(msgID uint32, router ...RouterHandler) IRouterSlices
+
+	// 路由组管理
+	Group(start, end uint32, Handlers ...RouterHandler) IGroupRouterSlices
+
+	// 公共组件管理
+	Use(Handlers ...RouterHandler) IRouterSlices
 
 	//获取当前server的连接管理器
 	GetConnMgr() IConnManager
