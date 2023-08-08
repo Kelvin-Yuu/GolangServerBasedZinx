@@ -23,7 +23,7 @@ func (r *Request) GetData() []byte {
 
 // 得到请求的消息ID
 func (r *Request) GetMsgId() uint32 {
-	return r.msg.GetMsgId()
+	return r.msg.GetMsgID()
 }
 
 // func (r *Request) GetMsgLen() uint32 {

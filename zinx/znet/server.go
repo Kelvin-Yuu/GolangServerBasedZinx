@@ -82,6 +82,23 @@ func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
 	return nil
 }
 
+// (根据config创建一个服务器句柄)
+func newServerWithConfig(config *zconf.Config, ipVersion string, opts ...Option) ziface.IServer {
+}
+
+// 初始化Server模块的方法
+func NewServer(name string) ziface.IServer {
+	s := &Server{
+		Name:       zconf.GlobalObject.Name,
+		IPVersion:  "tcp4",
+		IP:         zconf.GlobalObject.Host,
+		Port:       zconf.GlobalObject.TCPPort,
+		msgHandler: NewMsgHandle(),
+		ConnMgr:    NewConnManager(),
+	}
+	return s
+}
+
 // 启动服务器
 func (s *Server) Start() {
 	zlog.Ins().InfoF("[Zinx] Server Name : %s, Server Listener at IP: %s, Port: %d\n",
@@ -194,19 +211,6 @@ func (s *Server) Use(Handlers ...ziface.RouterHandler) ziface.IRouterSlices {
 // 获取当前server的连接管理器
 func (s *Server) GetConnMgr() ziface.IConnManager {
 	return s.ConnMgr
-}
-
-// 初始化Server模块的方法
-func NewServer(name string) ziface.IServer {
-	s := &Server{
-		Name:       zconf.GlobalObject.Name,
-		IPVersion:  "tcp4",
-		IP:         zconf.GlobalObject.Host,
-		Port:       zconf.GlobalObject.TCPPort,
-		msgHandler: NewMsgHandle(),
-		ConnMgr:    NewConnManager(),
-	}
-	return s
 }
 
 // 注册OnConnStart hook函数方法

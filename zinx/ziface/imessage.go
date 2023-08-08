@@ -6,7 +6,7 @@ package ziface
 
 type IMessage interface {
 	//获取消息的ID
-	GetMsgId() uint32
+	GetMsgID() uint32
 
 	//获取消息的长度
 	GetDataLen() uint32
@@ -15,7 +15,7 @@ type IMessage interface {
 	GetData() []byte
 
 	//设置消息的ID
-	SetMsgId(uint32)
+	SetMsgID(uint32)
 
 	//设置消息的长度
 	SetDataLen(uint32)

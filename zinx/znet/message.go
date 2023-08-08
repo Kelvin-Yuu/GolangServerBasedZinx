@@ -16,7 +16,7 @@ func NewMsgPackage(id uint32, data []byte) *Message {
 }
 
 // 获取消息的ID
-func (m *Message) GetMsgId() uint32 {
+func (m *Message) GetMsgID() uint32 {
 	return m.Id
 }
 
@@ -31,7 +31,7 @@ func (m *Message) GetData() []byte {
 }
 
 // 设置消息的ID
-func (m *Message) SetMsgId(id uint32) {
+func (m *Message) SetMsgID(id uint32) {
 	m.Id = id
 }
 
