@@ -29,9 +29,9 @@ func (pR *PingRouter) Handle(request ziface.IRequest) {
 	fmt.Println("Call Router Handle...")
 
 	//先读取客户端的数据，再回写ping...ping...ping
-	fmt.Println("recv from client: MsgID = ", request.GetMsgId(), ", data = ", string(request.GetData()))
+	fmt.Println("recv from client: MsgID = ", request.GetMsgID(), ", data = ", string(request.GetData()))
 
-	err := request.GetConnection().SendMsg(request.GetMsgId(), []byte("ping...ping...ping"))
+	err := request.GetConnection().SendMsg(request.GetMsgID(), []byte("ping...ping...ping"))
 	if err != nil {
 		fmt.Println(err)
 	}

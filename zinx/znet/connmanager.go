@@ -19,7 +19,7 @@ type ConnManager struct {
 }
 
 // 创建当前链接的方法
-func NewConnManager() *ConnManager {
+func newConnManager() *ConnManager {
 	return &ConnManager{
 		connections: make(map[uint32]ziface.IConnection),
 	}
@@ -33,7 +33,7 @@ func (connMgr *ConnManager) Add(conn ziface.IConnection) {
 
 	//将conn加入到ConnManager中
 	connMgr.connections[conn.GetConnID()] = conn
-	fmt.Println("ConnID=", conn.GetConnID(), " add to ConnManager successfully: conn num=", connMgr.Len())
+	fmt.Println("connID=", conn.GetConnID(), " add to ConnManager successfully: conn num=", connMgr.Len())
 }
 
 // 删除链接
@@ -44,7 +44,7 @@ func (connMgr *ConnManager) Remove(conn ziface.IConnection) {
 
 	//删除连接信息
 	delete(connMgr.connections, conn.GetConnID())
-	fmt.Println("ConnID=", conn.GetConnID(), " remove from ConnManager successfully: conn num=", connMgr.Len())
+	fmt.Println("connID=", conn.GetConnID(), " remove from ConnManager successfully: conn num=", connMgr.Len())
 }
 
 // 根据connID获取链接

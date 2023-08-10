@@ -24,7 +24,7 @@ type MsgHandle struct {
 }
 
 // 初始化/创建MsgHandle方法
-func NewMsgHandle() *MsgHandle {
+func newMsgHandle() *MsgHandle {
 	return &MsgHandle{
 		Apis:           make(map[uint32]ziface.IRouter),
 		TaskQueue:      make([]chan ziface.IRequest, zconf.GlobalObject.WorkerPoolSize),
@@ -35,9 +35,9 @@ func NewMsgHandle() *MsgHandle {
 // 调度/执行对应Router消息处理方法
 func (mh *MsgHandle) DoMsgHandle(request ziface.IRequest) {
 	//1 从Request中找到MsgID
-	handler, ok := mh.Apis[request.GetMsgId()]
+	handler, ok := mh.Apis[request.GetMsgID()]
 	if !ok {
-		fmt.Println("api msgID = ", request.GetMsgId(), " is NOT FOUND! Need Register!")
+		fmt.Println("api msgID = ", request.GetMsgID(), " is NOT FOUND! Need Register!")
 		return
 	}
 
@@ -82,10 +82,10 @@ func (mh *MsgHandle) doMsgHandlerSlices(request ziface.IRequest, workerID int) {
 		}
 	}()
 
-	msgId := request.GetMsgId()
+	msgId := request.GetMsgID()
 	handlers, ok := mh.RouterSlices.GetHandlers(msgId)
 	if !ok {
-		zlog.Ins().ErrorF("api msgID = %d is not FOUND!", request.GetMsgId())
+		zlog.Ins().ErrorF("api msgID = %d is not FOUND!", request.GetMsgID())
 		return
 	}
 
@@ -134,7 +134,7 @@ func (mh *MsgHandle) SendMsgToTaskQueue(request ziface.IRequest) {
 	//根据客户端建立的ConnID来进行分配
 	//基本的平均轮询分配法则
 	workerID := request.GetConnection().GetConnID() % mh.WorkerPoolSize
-	fmt.Println("Add ConnID=", request.GetConnection().GetConnID(), " Request MsgID=", request.GetMsgId(), " To WorkerID=", workerID)
+	fmt.Println("Add connID=", request.GetConnection().GetConnID(), " Request MsgID=", request.GetMsgID(), " To WorkerID=", workerID)
 
 	//2 将消息发送给对应的worker的TaskQueue即可
 	mh.TaskQueue[workerID] <- request

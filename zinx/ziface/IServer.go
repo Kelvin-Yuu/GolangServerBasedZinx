@@ -55,6 +55,10 @@ type IServer interface {
 	//启动心跳检测(自定义回调)
 	StartHeartBeatWithOption(time.Duration, *HeartBeatOption)
 
+	GetLengthField() *LengthField
+	SetDecoder(IDecoder)
+	AddInterceptor(IInterceptor)
+
 	// 获取心跳检测器
 	GetHeartBeat() IHeartbeatChecker
 

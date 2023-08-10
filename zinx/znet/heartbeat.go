@@ -14,8 +14,9 @@ type HeartbeatChecker struct {
 
 	onRemoteNotAlive ziface.OnRemoteNotAlive //用户自定义的远程连接不存活时的处理方法
 
-	msgID  uint32         // 心跳的消息ID
-	router ziface.IRouter //用户自定义的心跳检测消息业务处理路由
+	msgID        uint32                 // 心跳的消息ID
+	router       ziface.IRouter         //用户自定义的心跳检测消息业务处理路由
+	routerSlices []ziface.RouterHandler //用户自定义的心跳检测消息业务处理新路由
 
 	conn ziface.IConnection // 绑定的链接
 
@@ -49,7 +50,7 @@ func NewHeartbeatChecker(interval time.Duration) ziface.IHeartbeatChecker {
 // Handle -
 func (r *HeartBeatDefaultRouter) Handle(req ziface.IRequest) {
 	fmt.Printf("Recv Heartbeat from %s, MsgID = %+v, Data = %s",
-		req.GetConnection().RemoteAddr(), req.GetMsgId(), string(req.GetData()))
+		req.GetConnection().RemoteAddr(), req.GetMsgID(), string(req.GetData()))
 }
 
 // 默认的心跳消息生成函数
@@ -174,4 +175,15 @@ func (h *HeartbeatChecker) check() (err error) {
 		}
 	}
 	return err
+}
+
+func (h *HeartbeatChecker) BindRouterSlices(msgID uint32, handlers ...ziface.RouterHandler) {
+	if len(handlers) > 0 && msgID != ziface.HeartBeatDefaultMsgID {
+		h.msgID = msgID
+		h.routerSlices = append(h.routerSlices, handlers...)
+	}
+}
+
+func (h *HeartbeatChecker) RouterSlices() []ziface.RouterHandler {
+	return h.routerSlices
 }

@@ -1,14 +1,18 @@
 package znet
 
 import (
+	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
+	"zinx_server/zinx/zlog"
 )
 
 /*
@@ -16,51 +20,85 @@ import (
 */
 type Connection struct {
 	//当前链接的socket TCP套接字
-	Conn *net.TCPConn
-	//链接的ID
-	ConnID uint32
-	//当前的链接状态
-	isClosed bool
-	//告知当前链接已经退出/停止的channel
-	ExitChan chan bool
-	//当前链接是属于哪个Connection Manager的
-	connManager ziface.IConnManager
-	//无缓冲管道，用于读写Goroutine之间的消息通信
-	msgChan chan []byte
-	//有缓冲管道，用于读写Goroutine之间的消息通信
-	msgBuffChan chan []byte
+	conn net.Conn
+	//链接的ID，理论支持的进程connID的最大数量0 ~ 18,446,744,073,709,551,615
+	connID uint64
+	//字符串的链接ID
+	connIdStr string
+	//负责处理该链接的workId
+	workerID uint32
+
 	//消息的管理MsgID和对应的处理业务API关系
 	MsgHandler ziface.IMsgHandle
+
+	//告知该链接已经退出/停止的ctx
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	//有缓冲管道，用于读写Goroutine之间的消息通信
+	msgBuffChan chan []byte
+
+	//用户收发消息的Lock
+	msgLock sync.RWMutex
+
 	//链接属性集合
 	property map[string]interface{}
 	//保护链接属性的锁
 	propertyLock sync.RWMutex
+
+	//当前的链接状态
+	isClosed bool
+
+	//当前链接是属于哪个Connection Manager的
+	connManager ziface.IConnManager
+
 	// 前连接创建时Hook函数
 	onConnStart func(conn ziface.IConnection)
 	//当前连接断开时的Hook函数
 	onConnStop func(conn ziface.IConnection)
+
+	// Data packet packaging method
+	// (数据报文封包方式)
+	packet ziface.IDataPack
+
+	//// Framedecoder for solving fragmentation and packet sticking problems
+	//// (断粘包解码器)
+	//frameDecoder ziface.IFrameDecoder
+
 	// 最后一次活动时间
 	lastActivityTime time.Time
 	// 心跳检测器
 	hc ziface.IHeartbeatChecker
+
+	// 链接名称，默认与创建链接的Server/Client的Name一致
+	name string
+
+	// 当前链接的本地地址
+	localAddr string
+
+	// 当前链接的远程地址
+	remoteAddr string
 }
 
 // 初始化链接模块的方法
-func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandle) *Connection {
+func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connection {
 	c := &Connection{
-		Conn:        conn,
-		ConnID:      connID,
+		conn:        conn,
+		connID:      connID,
+		connIdStr:   strconv.FormatUint(connID, 10),
 		isClosed:    false,
-		ExitChan:    make(chan bool, 1),
-		msgChan:     make(chan []byte),
 		msgBuffChan: make(chan []byte, zconf.GlobalObject.MaxMsgChanLen),
-		MsgHandler:  msgHandler,
-		property:    make(map[string]interface{}),
+		property:    nil,
+		name:        server.ServerName(),
+		localAddr:   conn.LocalAddr().String(),
+		remoteAddr:  conn.RemoteAddr().String(),
 	}
 
 	//从server中继承过来的属性
+	c.packet = server.GetPacket()
 	c.onConnStart = server.GetOnConnStart()
 	c.onConnStop = server.GetOnConnStop()
+	c.MsgHandler = server.GetMsgHandler()
 
 	//将当前的Conn与Server的ConnManager绑定
 	c.connManager = server.GetConnMgr()
@@ -73,10 +111,40 @@ func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgH
 
 // 链接的读业务方法
 func (c *Connection) StartReader() {
-
-	fmt.Println("[Reader Goroutine is running...]")
-	defer fmt.Println("[Reader is exit] connID = ", c.ConnID, " remote addr is ", c.RemoteAddr().String())
+	zlog.Ins().InfoF("[Reader Goroutine is running]")
+	defer zlog.Ins().InfoF("%s [conn Reader exit!]", c.RemoteAddr().String())
 	defer c.Stop()
+	defer func() {
+		if err := recover(); err != nil {
+			zlog.Ins().ErrorF("connID=%d, panic err=%v", c.GetConnID(), err)
+		}
+	}()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+			buffer := make([]byte, zconf.GlobalObject.IOReadBuffSize)
+
+			// 从conn的IO中读取数据到内存缓存buffer中
+			n, err := c.conn.Read(buffer)
+			if err != nil {
+				zlog.Ins().ErrorF("read msg head [read datalen=%d], error = %s", n, err)
+				return
+			}
+			zlog.Ins().DebugF("read buffer %s \n", hex.EncodeToString(buffer[0:n]))
+
+			// 正常读取到对端数据，更新心跳检测Active状态
+			if n > 0 && c.hc != nil {
+				c.updateActivity()
+			}
+
+			// 处理自定义协议断粘包问题
+
+		}
+
+	}
 
 	for {
 		//创建一个拆包解包对象
@@ -133,29 +201,24 @@ func (c *Connection) StartReader() {
 // 链接的写业务方法
 // 写消息的Goroutine，专门发送给Client消息的模块
 func (c *Connection) StartWriter() {
-	fmt.Println("[Writer Goroutine is running...]")
-	defer fmt.Println(c.RemoteAddr().String(), " [conn Writer exit!]")
+	zlog.Ins().InfoF("Writer Goroutine is running")
+	defer zlog.Ins().InfoF("%s [conn Writer exit!]", c.RemoteAddr().String())
 
 	//不断阻塞等待channel消息，进行写给客户端
 	for {
 		select {
-		case data := <-c.msgChan:
-			if _, err := c.Conn.Write(data); err != nil {
-				fmt.Println("Send data Error:", err)
-				return
-			}
 		case data, ok := <-c.msgBuffChan:
 			if ok {
 				//有数据要写给客户端
-				if _, err := c.Conn.Write(data); err != nil {
-					fmt.Println("Send Buff Data Error:, ", err, " Conn Writer exit")
+				if _, err := c.conn.Write(data); err != nil {
+					zlog.Ins().ErrorF("Send Buff Data error:, %s Conn Writer exit", err)
 					return
 				}
 			} else {
 				fmt.Println("msgBuffChan is Closed")
 				break
 			}
-		case <-c.ExitChan:
+		case <-c.ctx.Done():
 			//代表Reader已经退出，此时Writer也要退出
 			return
 		}
@@ -164,7 +227,7 @@ func (c *Connection) StartWriter() {
 
 // 启动链接 让当前的链接准备开始工作
 func (c *Connection) Start() {
-	fmt.Println("Conn Start()...ConnID = ", c.ConnID)
+	fmt.Println("conn Start()...connID = ", c.connID)
 
 	// 启动心跳检测
 	if c.hc != nil {
@@ -183,7 +246,7 @@ func (c *Connection) Start() {
 
 // 停止链接 结束当前链接的工作
 func (c *Connection) Stop() {
-	fmt.Println("Conn Stop()...ConnID = ", c.ConnID)
+	fmt.Println("conn Stop()...connID = ", c.connID)
 
 	//按照开发者传递进来的 销毁链接之前需要调用的处理业务，执行对应的hook函数
 	c.callOnConnStart()
@@ -199,7 +262,7 @@ func (c *Connection) Stop() {
 	}
 
 	//关闭socket链接
-	c.Conn.Close()
+	c.conn.Close()
 
 	//告知Writer关闭
 	c.ExitChan <- true
@@ -218,22 +281,22 @@ func (c *Connection) Stop() {
 
 // 获取当前链接的绑定socket conn
 func (c *Connection) GetTCPConnection() *net.TCPConn {
-	return c.Conn
+	return c.conn
 }
 
 // 获取当前链接模块的链接ID
 func (c *Connection) GetConnID() uint32 {
-	return c.ConnID
+	return c.connID
 }
 
 // 获取远程客户端的TCP状态（IP,Port)
 func (c *Connection) RemoteAddr() net.Addr {
-	return c.Conn.RemoteAddr()
+	return c.conn.RemoteAddr()
 }
 
 // 获取本地服务器的TCP状态（IP,Port）
 func (c *Connection) LocalAddr() net.Addr {
-	return c.Conn.LocalAddr()
+	return c.conn.LocalAddr()
 }
 
 // 提供一个SendMsg方法 将我们要发送给客户端的数据，先进行封包，再发送
