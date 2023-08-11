@@ -135,7 +135,7 @@ func NewUserConfServer(config *zconf.Config, opts ...Option) ziface.IServer {
 	return s
 }
 
-//// (创建一个默认自带一个Recover处理器的服务器句柄)
+//// 创建一个默认自带一个Recover处理器的服务器句柄
 //func NewDefaultRouterSlicesServer(opts ...Option) ziface.IServer {
 //	zconf.GlobalObject.RouterSlicesMode = true
 //	s := newServerWithConfig(zconf.GlobalObject, "tcp", opts...)

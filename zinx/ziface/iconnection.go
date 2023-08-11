@@ -1,8 +1,11 @@
 package ziface
 
-import "net"
+import (
+	"github.com/gorilla/websocket"
+	"net"
+)
 
-//定义链接模块的抽象层
+// 定义链接模块的抽象层
 type IConnection interface {
 	//启动链接 让当前的链接准备开始工作
 	Start()
@@ -11,21 +14,44 @@ type IConnection interface {
 	Stop()
 
 	//获取当前链接的绑定socket conn
-	GetTCPConnection() *net.TCPConn
+	GetConnection() net.Conn
+
+	//从当前连接获取原始的socket TCPConn
+	GetTCPConnection() net.Conn
+
+	//从当前连接中获取原始的websocket连接
+	GetWsConn() *websocket.Conn
 
 	//获取当前链接模块的链接ID
-	GetConnID() uint32
+	GetConnID() uint64
+
+	//获取当前字符串连接ID
+	GetConnIdStr() string
+
+	//获取消息处理器
+	GetMsgHandler() IMsgHandle
+
+	//获取workerid
+	GetWorkerID() uint32
 
 	//获取远程客户端的TCP状态（IP,Port)
 	RemoteAddr() net.Addr
+	RemoteAddrString() string
 
 	//获取本地服务器的TCP状态（IP,Port）
 	LocalAddr() net.Addr
+	LocalAddrString() string
 
-	//发送数据，将数据发送给远程的客户端
+	//将数据直接发送到远程TCP客户端（无缓冲）
+	Send(data []byte) error
+
+	//将数据发送到稍后要发送到远程TCP客户端的消息队列
+	SendToQueue(data []byte) error
+
+	//直接将Message数据发送数据给远程的TCP客户端(无缓冲)
 	SendMsg(msgId uint32, data []byte) error
 
-	//发送数据，将数据发送给远程的客户端(有缓冲)
+	//直接将Message数据发送给远程的TCP客户端(有缓冲)
 	SendBuffMsg(msgId uint32, data []byte) error //添加带缓冲发送消息接口
 
 	//设置链接属性

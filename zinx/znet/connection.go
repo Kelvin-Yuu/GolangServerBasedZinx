@@ -5,14 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/gorilla/websocket"
 	"net"
 	"strconv"
 	"sync"
 	"time"
 	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
+	"zinx_server/zinx/zinterceptor"
 	"zinx_server/zinx/zlog"
+	"zinx_server/zinx/zpack"
 )
 
 /*
@@ -29,7 +31,7 @@ type Connection struct {
 	workerID uint32
 
 	//消息的管理MsgID和对应的处理业务API关系
-	MsgHandler ziface.IMsgHandle
+	msgHandler ziface.IMsgHandle
 
 	//告知该链接已经退出/停止的ctx
 	ctx    context.Context
@@ -61,9 +63,9 @@ type Connection struct {
 	// (数据报文封包方式)
 	packet ziface.IDataPack
 
-	//// Framedecoder for solving fragmentation and packet sticking problems
-	//// (断粘包解码器)
-	//frameDecoder ziface.IFrameDecoder
+	// Framedecoder for solving fragmentation and packet sticking problems
+	// (断粘包解码器)
+	frameDecoder ziface.IFrameDecoder
 
 	// 最后一次活动时间
 	lastActivityTime time.Time
@@ -94,11 +96,16 @@ func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connect
 		remoteAddr:  conn.RemoteAddr().String(),
 	}
 
+	lengthField := server.GetLengthField()
+	if lengthField != nil {
+		c.frameDecoder = zinterceptor.NewFrameDecoder(*lengthField)
+	}
+
 	//从server中继承过来的属性
 	c.packet = server.GetPacket()
 	c.onConnStart = server.GetOnConnStart()
 	c.onConnStop = server.GetOnConnStop()
-	c.MsgHandler = server.GetMsgHandler()
+	c.msgHandler = server.GetMsgHandler()
 
 	//将当前的Conn与Server的ConnManager绑定
 	c.connManager = server.GetConnMgr()
@@ -141,60 +148,25 @@ func (c *Connection) StartReader() {
 			}
 
 			// 处理自定义协议断粘包问题
-
-		}
-
-	}
-
-	for {
-		//创建一个拆包解包对象
-		dp := NewDataPack()
-
-		//读取客户端的Msg Head 二进制流 8 bytes
-		headData := make([]byte, dp.GetHeadLen())
-		n, err := io.ReadFull(c.GetTCPConnection(), headData)
-		if err != nil {
-			fmt.Println("read msg head error: ", err)
-			break
-		}
-
-		// 正常读取到对端数据，更新心跳检测Active状态
-		if n > 0 && c.hc != nil {
-			c.updateActivity()
-		}
-
-		//拆包，得到msgID 和 msgDataLen 放在msg消息中
-		msg, err := dp.UnPack(headData)
-		if err != nil {
-			fmt.Println("unpack error: ", err)
-			break
-		}
-
-		//根据dataLen，再次读取Data，放在msg.Data中
-		if msg.GetDataLen() > 0 {
-			var data []byte = make([]byte, msg.GetDataLen())
-			if _, err := io.ReadFull(c.GetTCPConnection(), data); err != nil {
-				fmt.Println("read msg data error: ", err)
-				break
+			if c.frameDecoder != nil {
+				// 为读取到的0-n个字节的数据进行解码
+				bufArrays := c.frameDecoder.Decode(buffer[0:n])
+				if bufArrays == nil {
+					continue
+				}
+				for _, bytes := range bufArrays {
+					msg := zpack.NewMessage(uint32(len(bytes)), bytes)
+					// 得到当前客户端请求的Request数据
+					req := NewRequest(c, msg)
+					c.msgHandler.Execute(req)
+				}
+			} else {
+				msg := zpack.NewMessage(uint32(n), buffer[0:n])
+				// 得到当前客户端请求的Request数据
+				req := NewRequest(c, msg)
+				c.msgHandler.Execute(req)
 			}
-			msg.SetData(data)
 		}
-
-		//得到当前conn数据的Request请求数据
-		req := Request{
-			conn: c,
-			msg:  msg,
-		}
-
-		if zconf.GlobalObject.WorkerPoolSize > 0 {
-			//已经开启了工作池机制，将消息发送给我Worker工作池处理
-			c.MsgHandler.SendMsgToTaskQueue(&req)
-		} else {
-			//从路由中，找到注册绑定的Conn对应的Router调用
-			//根据绑定好的MsgID找到对应处理api业务方法
-			go c.MsgHandler.DoMsgHandle(&req)
-		}
-
 	}
 }
 
@@ -227,7 +199,15 @@ func (c *Connection) StartWriter() {
 
 // 启动链接 让当前的链接准备开始工作
 func (c *Connection) Start() {
-	fmt.Println("conn Start()...connID = ", c.connID)
+	defer func() {
+		if err := recover(); err != nil {
+			zlog.Ins().ErrorF("Connection Start() error: %v", err)
+		}
+	}()
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+
+	// 按照用户传递进来的 创建连接时需要处理的业务，执行hook方法
+	c.callOnConnStart()
 
 	// 启动心跳检测
 	if c.hc != nil {
@@ -235,63 +215,63 @@ func (c *Connection) Start() {
 		c.updateActivity()
 	}
 
+	// 占用workerID
+	c.workerID = useWorker(c)
+
 	//启动从当前链接的读数据的业务
 	go c.StartReader()
-	//启动从当前连接写数据业务
-	go c.StartWriter()
 
-	//按照开发者传递进来的 创建链接之后需要调用的处理业务，执行对应的hook函数
-	c.callOnConnStop()
+	select {
+	case <-c.ctx.Done():
+		c.finalizer()
+		//归还workerID
+		freeWorker(c)
+		return
+	}
 }
 
 // 停止链接 结束当前链接的工作
 func (c *Connection) Stop() {
-	fmt.Println("conn Stop()...connID = ", c.connID)
-
-	//按照开发者传递进来的 销毁链接之前需要调用的处理业务，执行对应的hook函数
-	c.callOnConnStart()
-
-	//如果当前链接已经关闭SendMsg
-	if c.isClosed {
-		return
-	}
-
-	// 关闭链接绑定的心跳检测器
-	if c.hc != nil {
-		c.hc.Stop()
-	}
-
-	//关闭socket链接
-	c.conn.Close()
-
-	//告知Writer关闭
-	c.ExitChan <- true
-
-	//将当前链接从ConnMgr中删除掉
-	if c.connManager != nil {
-		c.connManager.Remove(c)
-	}
-
-	//回收资源
-	close(c.ExitChan)
-	close(c.msgChan)
-
-	c.isClosed = true
+	c.cancel()
 }
 
 // 获取当前链接的绑定socket conn
-func (c *Connection) GetTCPConnection() *net.TCPConn {
+func (c *Connection) GetConnection() net.Conn {
 	return c.conn
 }
 
+// Deprecated: use GetConnection instead
+func (c *Connection) GetTCPConnection() net.Conn {
+	return c.conn
+}
+
+func (c *Connection) GetWsConn() *websocket.Conn {
+	return nil
+}
+
 // 获取当前链接模块的链接ID
-func (c *Connection) GetConnID() uint32 {
+func (c *Connection) GetConnID() uint64 {
 	return c.connID
+}
+
+func (c *Connection) GetConnIdStr() string {
+	return c.connIdStr
+}
+
+func (c *Connection) GetMsgHandler() ziface.IMsgHandle {
+	return c.msgHandler
+}
+
+func (c *Connection) GetWorkerID() uint32 {
+	return c.workerID
 }
 
 // 获取远程客户端的TCP状态（IP,Port)
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
+}
+func (c *Connection) RemoteAddrString() string {
+	return c.remoteAddr
 }
 
 // 获取本地服务器的TCP状态（IP,Port）
@@ -299,43 +279,108 @@ func (c *Connection) LocalAddr() net.Addr {
 	return c.conn.LocalAddr()
 }
 
+func (c *Connection) LocalAddrString() string {
+	return c.localAddr
+}
+
+func (c *Connection) Send(data []byte) error {
+	c.msgLock.RLock()
+	defer c.msgLock.RUnlock()
+
+	if c.isClosed == true {
+		return errors.New("connection closed when send msg")
+	}
+
+	_, err := c.conn.Write(data)
+	if err != nil {
+		zlog.Ins().ErrorF("SendMsg err data = %+v, err = %+v", data, err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *Connection) SendToQueue(data []byte) error {
+	c.msgLock.RLock()
+	defer c.msgLock.RUnlock()
+
+	if c.isClosed == true {
+		return errors.New("connection closed when send buff msg")
+	}
+
+	if c.msgBuffChan == nil {
+		c.msgBuffChan = make(chan []byte, zconf.GlobalObject.MaxMsgChanLen)
+		// 开启用于写回客户端数据流程的Goroutine
+		// 此方法只读取MsgBuffChan中的数据没调用SendBuffMsg可以分配内存和启用协程
+		go c.StartWriter()
+	}
+
+	idleTimeout := time.NewTimer(5 * time.Millisecond)
+	defer idleTimeout.Stop()
+
+	if data == nil {
+		zlog.Ins().ErrorF("Pack data is nil")
+		return errors.New("Pack data is nil")
+	}
+
+	// Send timeout
+	select {
+	case <-idleTimeout.C:
+		return errors.New("send buff timeout")
+	case c.msgBuffChan <- data:
+		return nil
+	}
+}
+
 // 提供一个SendMsg方法 将我们要发送给客户端的数据，先进行封包，再发送
 func (c *Connection) SendMsg(msgId uint32, data []byte) error {
-	if c.isClosed {
-		return errors.New("Connection closed when send msg")
+	if c.isClosed == true {
+		return errors.New("connection closed when send msg")
 	}
-
-	//将data进行封包 MsgDataLen|MsgID|Data
-	dp := NewDataPack()
-	binaryMsg, err := dp.Pack(NewMsgPackage(msgId, data))
+	// Pack data and send it
+	msg, err := c.packet.Pack(zpack.NewMsgPackage(msgId, data))
 	if err != nil {
-		fmt.Println("Pack error msg id = ", msgId)
-		return errors.New("Pack error msg")
+		zlog.Ins().ErrorF("Pack error msg ID = %d", msgId)
+		return errors.New("Pack error msg ")
 	}
 
-	//发送消息到绑定客户端
-	c.msgChan <- binaryMsg
+	err = c.Send(msg)
+	if err != nil {
+		zlog.Ins().ErrorF("SendMsg err msg ID = %d, data = %+v, err = %+v", msgId, string(msg), err)
+		return err
+	}
 
 	return nil
 }
 
 // 提供一个SendMsg方法 将我们要发送给客户端的数据，先进行封包，再发送(有缓冲)
 func (c *Connection) SendBuffMsg(msgId uint32, data []byte) error {
-	if c.isClosed {
-		return errors.New("Connection closed when send buff msg")
+	if c.isClosed == true {
+		return errors.New("connection closed when send buff msg")
 	}
-	//将data封包，并且发送
-	dp := NewDataPack()
-	msg, err := dp.Pack(NewMsgPackage(msgId, data))
+	if c.msgBuffChan == nil {
+		c.msgBuffChan = make(chan []byte, zconf.GlobalObject.MaxMsgChanLen)
+		// 开启用于写回客户端数据流程的Goroutine
+		// 此方法只读取MsgBuffChan中的数据没调用SendBuffMsg可以分配内存和启用协程
+		go c.StartWriter()
+	}
+
+	idleTimeout := time.NewTimer(5 * time.Millisecond)
+	defer idleTimeout.Stop()
+
+	msg, err := c.packet.Pack(zpack.NewMsgPackage(msgId, data))
 	if err != nil {
-		fmt.Println("Pack error msg id = ", msgId)
+		zlog.Ins().ErrorF("Pack error msg ID = %d", msgId)
 		return errors.New("Pack error msg ")
 	}
 
-	//发送消息到绑定客户端
-	c.msgBuffChan <- msg
-
-	return nil
+	// send timeout
+	select {
+	case <-idleTimeout.C:
+		return errors.New("send buff msg timeout")
+	case c.msgBuffChan <- msg:
+		return nil
+	}
 }
 
 // 设置链接属性
@@ -371,15 +416,17 @@ func (c *Connection) RemoveProperty(key string) {
 // 调用onConnStart Hook函数
 func (c *Connection) callOnConnStart() {
 	if c.onConnStart != nil {
-		fmt.Println("----> Call OnConnStart()...")
+		zlog.Ins().InfoF("ZINX CallOnConnStart....")
 		c.onConnStart(c)
 	}
 }
 
 // 调用onConnStop Hook函数
 func (c *Connection) callOnConnStop() {
-	fmt.Println("----> Call OnConnStop()...")
-	c.onConnStop(c)
+	if c.onConnStop != nil {
+		zlog.Ins().InfoF("ZINX CallOnConnStop....")
+		c.onConnStop(c)
+	}
 }
 
 // 判断当前链接是否存活
@@ -400,4 +447,35 @@ func (c *Connection) updateActivity() {
 // 设置心跳检测器
 func (c *Connection) SetHeartBeat(checker ziface.IHeartbeatChecker) {
 	c.hc = checker
+}
+
+func (c *Connection) finalizer() {
+	// 如果用户注册了该链接， 那么这里直接调用关闭回调业务
+	c.callOnConnStop()
+
+	c.msgLock.Lock()
+	defer c.msgLock.Unlock()
+
+	if c.isClosed == true {
+		return
+	}
+
+	if c.hc != nil {
+		c.hc.Stop()
+	}
+
+	_ = c.conn.Close()
+
+	if c.connManager != nil {
+		c.connManager.Remove(c)
+	}
+
+	if c.msgBuffChan != nil {
+		close(c.msgBuffChan)
+	}
+
+	c.isClosed = true
+
+	zlog.Ins().InfoF("Conn Stop()...ConnID = %d", c.connID)
+
 }
