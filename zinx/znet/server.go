@@ -100,7 +100,7 @@ func newServerWithConfig(config *zconf.Config, ipVersion string, opts ...Option)
 		KcpPort:          config.KcpPort,
 		msgHandler:       newMsgHandle(),
 		RouterSlicesMode: config.RouterSlicesMode,
-		ConnMgr:          newConnManager(),
+		ConnMgr:          NewConnManager(),
 		exitChan:         nil,
 
 		packet:  zpack.Factory().NewPack(ziface.ZinxDataPack),
