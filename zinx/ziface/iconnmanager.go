@@ -11,7 +11,7 @@ type IConnManager interface {
 	Remove(conn IConnection)
 
 	//根据connID获取链接
-	Get(connID uint32) (IConnection, error)
+	Get(connID uint64) (IConnection, error)
 
 	//根据字符串connID获取链接
 	Get2(connIdStr string) (IConnection, error)
