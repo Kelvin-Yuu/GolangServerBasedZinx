@@ -1,5 +1,7 @@
 package ziface
 
+import "time"
+
 /*
 定义一个客户端接口
 */
@@ -25,9 +27,42 @@ type IClient interface {
 	//注册OnConnStop hook函数方法
 	SetOnConnStop(func(connection IConnection))
 
-	//调用OnConnStart hook函数方法
-	CallOnConnStart(connection IConnection)
+	//获取该Client的连接创建时Hook函数
+	GetOnConnStart() func(IConnection)
 
-	//调用OnConnStop hook函数方法
-	CallOnConnStop(connection IConnection)
+	//设置该Client的连接断开时的Hook函数
+	GetOnConnStop() func(IConnection)
+
+	//获取Client绑定的数据协议封包方法
+	GetPacket() IDataPack
+
+	//设置Client绑定的数据协议封包方法
+	SetPacket(pack IDataPack)
+
+	//获取Client绑定的消息处理模块
+	GetMsgHandler() IMsgHandle
+
+	//启动心跳检测
+	StartHeartBeat(duration time.Duration)
+
+	//启动心跳检测（自定义回调）
+	StartHeartBeatWithOption(duration time.Duration, option *HeartBeatOption)
+
+	//获取客户端的长度字段
+	GetLengthField() *LengthField
+
+	//设置解码器
+	SetDecoder(decoder IDecoder)
+
+	//添加拦截器
+	AddInterceptor(interceptor IInterceptor)
+
+	//获取客户端错误管道
+	GetErrChan() chan error
+
+	//设置客户端Client名称
+	SetName(string)
+
+	//获取客户端Client名称
+	GetName() string
 }

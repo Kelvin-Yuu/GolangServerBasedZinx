@@ -82,7 +82,7 @@ type Connection struct {
 	remoteAddr string
 }
 
-// 初始化链接模块的方法
+// 创建一个Server服务端特性的连接的方法
 func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connection {
 	c := &Connection{
 		conn:        conn,
@@ -112,6 +112,33 @@ func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connect
 
 	//将新创建的conn加入到ConnManager中
 	server.GetConnMgr().Add(c)
+
+	return c
+}
+
+// 创建一个Client服务端特性的连接的方法
+func newClientConn(client ziface.IClient, conn net.Conn) ziface.IConnection {
+	c := &Connection{
+		conn:        conn,
+		connID:      0,
+		connIdStr:   "",
+		isClosed:    false,
+		msgBuffChan: nil,
+		property:    nil,
+		name:        client.GetName(),
+		localAddr:   conn.LocalAddr().String(),
+		remoteAddr:  conn.RemoteAddr().String(),
+	}
+
+	lengthField := client.GetLengthField()
+	if lengthField != nil {
+		c.frameDecoder = zinterceptor.NewFrameDecoder(*lengthField)
+	}
+
+	c.packet = client.GetPacket()
+	c.onConnStart = client.GetOnConnStart()
+	c.onConnStop = client.GetOnConnStop()
+	c.msgHandler = client.GetMsgHandler()
 
 	return c
 }

@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 	"zinx_server/zinx/zconf"
+	"zinx_server/zinx/zdecoder"
 	"zinx_server/zinx/ziface"
 	"zinx_server/zinx/zlog"
 	"zinx_server/zinx/zpack"

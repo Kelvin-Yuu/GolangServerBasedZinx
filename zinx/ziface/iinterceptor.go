@@ -9,7 +9,7 @@ type IcResp interface{}
 // 拦截器
 type IInterceptor interface {
 	//拦截器的拦截处理方法,由开发者定义
-	Interceptor(IChain) IcResp
+	Intercept(IChain) IcResp
 }
 
 // 责任链

@@ -28,7 +28,7 @@ func (c *Chain) Proceed(request ziface.IcReq) ziface.IcResp {
 	if c.position < len(c.interceptors) {
 		chain := NewChain(c.interceptors, c.position+1, request)
 		interceptor := c.interceptors[c.position]
-		response := interceptor.Interceptor(chain)
+		response := interceptor.Intercept(chain)
 		return response
 	}
 	return request
@@ -47,9 +47,9 @@ func (c *Chain) GetIMessage() ziface.IMessage {
 	return iRequest.GetMessage()
 }
 
-// Next 通过IMessage和解码后数据进入下一个责任链任务
-// iMessage 为解码后的IMessage
-// response 为解码后的数据
+// Next 通过IMessage和解码后数据进入下一个责任链任务;
+// iMessage 为解码后的IMessage;
+// response 为解码后的数据;
 func (c *Chain) ProceedWithIMessage(iMessage ziface.IMessage, response ziface.IcReq) ziface.IcResp {
 	if iMessage == nil || response == nil {
 		return c.Proceed(c.Request())
