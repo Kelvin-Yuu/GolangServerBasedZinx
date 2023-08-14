@@ -3,7 +3,7 @@ package zconf
 import "zinx_server/zinx/zlog"
 
 func UserConfToGlobal(config *Config) {
-	// Server
+	// Serve
 	if config.Name != "" {
 		GlobalObject.Name = config.Name
 	}

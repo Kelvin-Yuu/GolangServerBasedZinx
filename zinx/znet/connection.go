@@ -251,6 +251,7 @@ func (c *Connection) Start() {
 	select {
 	case <-c.ctx.Done():
 		c.finalizer()
+
 		//归还workerID
 		freeWorker(c)
 		return

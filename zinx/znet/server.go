@@ -136,13 +136,28 @@ func NewUserConfServer(config *zconf.Config, opts ...Option) ziface.IServer {
 	return s
 }
 
-//// 创建一个默认自带一个Recover处理器的服务器句柄
-//func NewDefaultRouterSlicesServer(opts ...Option) ziface.IServer {
-//	zconf.GlobalObject.RouterSlicesMode = true
-//	s := newServerWithConfig(zconf.GlobalObject, "tcp", opts...)
-//	s.Use(RouterRecovery)
-//	return s
-//}
+// 创建一个默认自带一个Recover处理器的服务器句柄
+func NewDefaultRouterSlicesServer(opts ...Option) ziface.IServer {
+	zconf.GlobalObject.RouterSlicesMode = true
+	s := newServerWithConfig(zconf.GlobalObject, "tcp", opts...)
+	s.Use(RouterRecovery)
+	return s
+}
+
+// 创建一个用户配置的自带一个Recover处理器的服务器句柄，如果用户不希望Use这个方法，那么应该使用NewUserConfServer
+func NewUserConfDefaultRouterSlicesServer(config *zconf.Config, opts ...Option) ziface.IServer {
+
+	if !config.RouterSlicesMode {
+		panic("RouterSlicesMode is false")
+	}
+
+	// 刷新用户配置到全局配置变量
+	zconf.UserConfToGlobal(config)
+
+	s := newServerWithConfig(zconf.GlobalObject, "tcp4", opts...)
+	s.Use(RouterRecovery)
+	return s
+}
 
 func (s *Server) StartConn(conn ziface.IConnection) {
 	// HeartBeat check
@@ -173,6 +188,7 @@ func (s *Server) ListenTcpConn() {
 		if err != nil {
 			panic(err)
 		}
+
 		// TLS connection
 		tlsConfig := &tls.Config{}
 		tlsConfig.Certificates = []tls.Certificate{crt}
@@ -239,7 +255,7 @@ func (s *Server) ListenKcpConn() {
 
 // 启动服务器
 func (s *Server) Start() {
-	zlog.Ins().InfoF("[Zinx] Server Name : %s, Server Listener at IP: %s, Port: %d\n",
+	zlog.Ins().InfoF("[Zinx] Serve Name : %s, Serve Listener at IP: %s, Port: %d\n",
 		s.Name, s.IP, s.Port)
 	zlog.Ins().InfoF("[Zinx] Version : %s, MaxConn: %d, MaxPackageSize: %d\n",
 		zconf.GlobalObject.Version,
@@ -247,7 +263,9 @@ func (s *Server) Start() {
 		zconf.GlobalObject.MaxPacketSize)
 
 	// 将解码器添加到拦截器
-
+	if s.decoder != nil {
+		s.msgHandler.AddInterceptor(s.decoder)
+	}
 	// 启动worker工作池
 	s.msgHandler.StartWorkerPool()
 
@@ -276,7 +294,7 @@ func (s *Server) Stop() {
 }
 
 // 运行服务器
-func (s *Server) Server() {
+func (s *Server) Serve() {
 	//启动server的服务功能
 	s.Start()
 
@@ -291,7 +309,7 @@ func (s *Server) Server() {
 // 路由功能：给当前的服务注册一个路由方法，供客户端的链接处理使用
 func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 	if s.RouterSlicesMode {
-		panic("Server RouterSlicesMode is TRUE!! ")
+		panic("Serve RouterSlicesMode is TRUE!! ")
 	}
 	s.msgHandler.AddRouter(msgID, router)
 	fmt.Println("Add Router [MsgID =", msgID, "] Successed!")
@@ -299,21 +317,21 @@ func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 
 func (s *Server) AddRouterSlices(msgId uint32, router ...ziface.RouterHandler) ziface.IRouterSlices {
 	if !s.RouterSlicesMode {
-		panic("Server RouterSlicesMode is FALSE!! ")
+		panic("Serve RouterSlicesMode is FALSE!! ")
 	}
 	return s.msgHandler.AddRouterSlices(msgId, router...)
 }
 
 func (s *Server) Group(start, end uint32, Handlers ...ziface.RouterHandler) ziface.IGroupRouterSlices {
 	if !s.RouterSlicesMode {
-		panic("Server RouterSlicesMode is FALSE!! ")
+		panic("Serve RouterSlicesMode is FALSE!! ")
 	}
 	return s.msgHandler.Group(start, end, Handlers...)
 }
 
 func (s *Server) Use(Handlers ...ziface.RouterHandler) ziface.IRouterSlices {
 	if !s.RouterSlicesMode {
-		panic("Server RouterSlicesMode is FALSE!! ")
+		panic("Serve RouterSlicesMode is FALSE!! ")
 	}
 	return s.msgHandler.Use(Handlers...)
 }

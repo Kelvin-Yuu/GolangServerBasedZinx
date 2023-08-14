@@ -48,17 +48,15 @@ type IRequest interface {
 
 type BaseRequest struct{}
 
-func (br *BaseRequest) GetConnection() IConnection { return nil }
-func (br *BaseRequest) GetData() []byte            { return nil }
-func (br *BaseRequest) GetMsgID() uint32           { return 0 }
-func (br *BaseRequest) GetMessage() IMessage       { return nil }
-
-func (br *BaseRequest) GetResponse() IcResp       { return nil }
-func (br *BaseRequest) SetResponse(resp IcResp)   {}
-func (br *BaseRequest) BindRouter(router IRouter) {}
-func (br *BaseRequest) Call()                     {}
-func (br *BaseRequest) Abort()                    {}
-
+func (br *BaseRequest) GetConnection() IConnection       { return nil }
+func (br *BaseRequest) GetData() []byte                  { return nil }
+func (br *BaseRequest) GetMsgID() uint32                 { return 0 }
+func (br *BaseRequest) GetMessage() IMessage             { return nil }
+func (br *BaseRequest) GetResponse() IcResp              { return nil }
+func (br *BaseRequest) SetResponse(resp IcResp)          {}
+func (br *BaseRequest) BindRouter(router IRouter)        {}
+func (br *BaseRequest) Call()                            {}
+func (br *BaseRequest) Abort()                           {}
 func (br *BaseRequest) Goto(HandleStep)                  {}
 func (br *BaseRequest) BindRouterSlices([]RouterHandler) {}
 func (br *BaseRequest) RouterSlicesNext()                {}

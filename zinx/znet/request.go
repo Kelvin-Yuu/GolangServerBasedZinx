@@ -82,6 +82,7 @@ func (r *Request) Call() {
 			r.router.PostHandle(r)
 
 		}
+		r.next()
 
 	}
 	r.steps = PRE_HANDLE

@@ -30,7 +30,7 @@ const (
 type Config struct {
 
 	/*
-		Server
+		Serve
 	*/
 	Host    string //当前服务器主机监听的IP
 	TCPPort int    //当前服务器主机TCP监听的端口号
