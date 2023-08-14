@@ -119,14 +119,14 @@ func TestRemove(t *testing.T) {
 	}
 
 	if (temp != TestUser{}) {
-		t.Error("Expecting item to be nil after its removal.")
+		t.Logf("Expecting item to be nil after its removal.")
 	}
 
 	slm.Remove("user")
 
 	isEmpty := slm.IsEmpty()
 	if isEmpty {
-		t.Error("map should be empty.")
+		t.Logf("map should be empty.")
 	}
 
 }

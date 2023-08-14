@@ -1,5 +1,7 @@
 package zasync_op
 
+import "sync"
+
 /*
 	<异步IO模块>
 
@@ -16,3 +18,53 @@ package zasync_op
 	c. 注册设置异步回调，即回到原本的业务线程里继续进行后续的操作：asyncResult.OnComplete
 
 */
+
+// 异步worker组
+var asyncWorkerArray = [2048]*AsyncWorker{}
+var initAsyncWorkerLocker = &sync.Mutex{}
+
+func Process(opId int, asyncOp func()) {
+	if asyncOp == nil {
+		return
+	}
+	curWorker := getCurWorker(opId)
+
+	if curWorker != nil {
+		curWorker.process(asyncOp)
+	}
+}
+
+func getCurWorker(opId int) *AsyncWorker {
+	if opId < 0 {
+		opId = -opId
+	}
+
+	workerIndex := opId % len(asyncWorkerArray)
+	curWorker := asyncWorkerArray[workerIndex]
+
+	if curWorker != nil {
+		return curWorker
+	}
+
+	//初始化
+	initAsyncWorkerLocker.Lock()
+	defer initAsyncWorkerLocker.Unlock()
+
+	//重新获取这个正在工作的worker
+	curWorker = asyncWorkerArray[workerIndex]
+
+	//重新进行空指针判断
+	if curWorker != nil {
+		return curWorker
+	}
+
+	//双重检查之后还是空值，进行初始化操作
+	curWorker = &AsyncWorker{
+		taskQ: make(chan func(), 2048),
+	}
+
+	asyncWorkerArray[workerIndex] = curWorker
+	go curWorker.loopExecTask()
+
+	return curWorker
+}
