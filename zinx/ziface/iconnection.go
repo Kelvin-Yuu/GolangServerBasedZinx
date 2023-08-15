@@ -1,6 +1,7 @@
 package ziface
 
 import (
+	"context"
 	"github.com/gorilla/websocket"
 	"net"
 )
@@ -68,4 +69,7 @@ type IConnection interface {
 
 	//设置心跳检测器
 	SetHeartBeat(checker IHeartbeatChecker)
+
+	//返回ctx，用于用户自定义的go程获取连接退出状态
+	Context() context.Context
 }

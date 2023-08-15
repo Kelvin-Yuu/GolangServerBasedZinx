@@ -89,7 +89,7 @@ func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connect
 		connID:      connID,
 		connIdStr:   strconv.FormatUint(connID, 10),
 		isClosed:    false,
-		msgBuffChan: make(chan []byte, zconf.GlobalObject.MaxMsgChanLen),
+		msgBuffChan: nil,
 		property:    nil,
 		name:        server.ServerName(),
 		localAddr:   conn.LocalAddr().String(),
@@ -120,8 +120,8 @@ func newServerConn(server ziface.IServer, conn net.Conn, connID uint64) *Connect
 func newClientConn(client ziface.IClient, conn net.Conn) ziface.IConnection {
 	c := &Connection{
 		conn:        conn,
-		connID:      0,
-		connIdStr:   "",
+		connID:      0,  // client ignore
+		connIdStr:   "", // client ignore
 		isClosed:    false,
 		msgBuffChan: nil,
 		property:    nil,
@@ -332,10 +332,6 @@ func (c *Connection) SendToQueue(data []byte) error {
 	c.msgLock.RLock()
 	defer c.msgLock.RUnlock()
 
-	if c.isClosed == true {
-		return errors.New("connection closed when send buff msg")
-	}
-
 	if c.msgBuffChan == nil {
 		c.msgBuffChan = make(chan []byte, zconf.GlobalObject.MaxMsgChanLen)
 		// 开启用于写回客户端数据流程的Goroutine
@@ -346,15 +342,19 @@ func (c *Connection) SendToQueue(data []byte) error {
 	idleTimeout := time.NewTimer(5 * time.Millisecond)
 	defer idleTimeout.Stop()
 
+	if c.isClosed == true {
+		return errors.New("connection closed when send buff msg")
+	}
+
 	if data == nil {
 		zlog.Ins().ErrorF("Pack data is nil")
-		return errors.New("Pack data is nil")
+		return errors.New("pack data is nil")
 	}
 
 	// Send timeout
 	select {
 	case <-idleTimeout.C:
-		return errors.New("send buff timeout")
+		return errors.New("send buff msg timeout")
 	case c.msgBuffChan <- data:
 		return nil
 	}
@@ -506,4 +506,8 @@ func (c *Connection) finalizer() {
 
 	zlog.Ins().InfoF("Conn Stop()...ConnID = %d", c.connID)
 
+}
+
+func (c *Connection) Context() context.Context {
+	return c.ctx
 }

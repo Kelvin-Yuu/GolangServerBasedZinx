@@ -52,7 +52,10 @@ func getInfo(ship int) (infoStr string) {
 		funcName := runtime.FuncForPC(pc).Name()
 		fileName := path.Base(file)
 		funcName = strings.Split(funcName, ".")[1]
-		fmt.Fprintf(panicInfo, "funcname:%s filename:%s LineNo:%d\n", funcName, fileName, lineNo)
+		_, err := fmt.Fprintf(panicInfo, "funcname:%s filename:%s LineNo:%d\n", funcName, fileName, lineNo)
+		if err != nil {
+			return ""
+		}
 	}
 
 	return panicInfo.String()

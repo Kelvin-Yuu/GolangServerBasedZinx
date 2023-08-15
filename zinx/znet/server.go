@@ -79,17 +79,6 @@ type Server struct {
 	cID uint64
 }
 
-// 定义当前客户端链接的所绑定的handle api(目前这个handle是写死的，以后优化应该由用户自定义handle方法)
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	//回显的业务
-	fmt.Println("[conn Handle] CallBackToClient...")
-	if _, err := conn.Write(data[:cnt]); err != nil {
-		fmt.Println("writ back buf err: ", err)
-		return errors.New("CallBackToClient error")
-	}
-	return nil
-}
-
 // (根据config创建一个服务器句柄)
 func newServerWithConfig(config *zconf.Config, ipVersion string, opts ...Option) ziface.IServer {
 	s := &Server{
@@ -382,7 +371,11 @@ func (s *Server) StartHeartBeat(interval time.Duration) {
 	checker := NewHeartbeatChecker(interval)
 
 	//添加心跳检测的路由
-	s.AddRouter(checker.MsgID(), checker.Router())
+	if s.RouterSlicesMode {
+		s.AddRouterSlices(checker.MsgID(), checker.RouterSlices()...)
+	} else {
+		s.AddRouter(checker.MsgID(), checker.Router())
+	}
 
 	//server绑定心跳检测器
 	s.hc = checker

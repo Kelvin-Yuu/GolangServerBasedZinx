@@ -3,7 +3,6 @@ package znet
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"sync"
 	"zinx_server/zinx/zconf"
 	"zinx_server/zinx/ziface"
@@ -93,7 +92,8 @@ func (mh *MsgHandle) AddRouter(msgID uint32, router ziface.IRouter) {
 	//1 判断 当前msg绑定的API处理方式是否已经存在
 	if _, ok := mh.Apis[msgID]; ok {
 		//id已经注册了
-		panic("repeat api, msgID = " + strconv.Itoa(int(msgID)))
+		msgErr := fmt.Sprintf("repeated api , msgID = %+v\n", msgID)
+		panic(msgErr)
 	}
 
 	//2 添加msg与API的绑定关系
@@ -139,6 +139,9 @@ func (mh *MsgHandle) startOneWorker(workerID int, taskQueue chan ziface.IRequest
 		//如果有消息过来，出列的就是一个客户端的Request，执行当前Request所绑定业务
 		case request := <-taskQueue:
 			switch req := request.(type) {
+			case ziface.IFuncRequest:
+				//内部函数调用request
+				mh.doFuncHandler(req, workerID)
 			case ziface.IRequest:
 				if !zconf.GlobalObject.RouterSlicesMode {
 					mh.doMsgHandle(req, workerID)
@@ -153,7 +156,8 @@ func (mh *MsgHandle) startOneWorker(workerID int, taskQueue chan ziface.IRequest
 // 将消息交给TaskQueue，由Worker进行处理
 func (mh *MsgHandle) SendMsgToTaskQueue(request ziface.IRequest) {
 	workerID := request.GetConnection().GetWorkerID()
-
+	zlog.Ins().DebugF("Add ConnID=%d request msgID=%d to workerID=%d", request.GetConnection().GetConnID(), request.GetMsgID(), workerID)
+	// Send the request message to the task queue
 	mh.TaskQueue[workerID] <- request
 	zlog.Ins().DebugF("SendMsgToTaskQueue-->%s", hex.EncodeToString(request.GetData()))
 }
@@ -250,6 +254,6 @@ func (mh *MsgHandle) doFuncHandler(request ziface.IFuncRequest, workerID int) {
 			zlog.Ins().ErrorF("workerID: %d doFuncRequest panic: %v", workerID, err)
 		}
 	}()
-	// Execute the functional request (执行函数式请求)
+	//执行函数式请求
 	request.CallFunc()
 }

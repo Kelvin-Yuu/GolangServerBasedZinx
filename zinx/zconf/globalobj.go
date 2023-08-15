@@ -171,6 +171,8 @@ func init() {
 	testing.Init()
 	uflag.Parse()
 
+	args.FlagHandle()
+
 	GlobalObject = &Config{
 		Name:              "ZinxServerApp",
 		Version:           "V1.0",
