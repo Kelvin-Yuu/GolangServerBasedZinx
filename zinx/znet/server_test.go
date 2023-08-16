@@ -46,7 +46,7 @@ func ClientTest(i uint32) {
 			return
 		}
 
-		msgHead, err := dp.UnPack(headData)
+		msgHead, err := dp.Unpack(headData)
 		if err != nil {
 			fmt.Println("client unpack head err: ", err)
 			return

@@ -45,7 +45,7 @@ func (dp *DataPack) Pack(msg ziface.IMessage) ([]byte, error) {
 }
 
 // 拆包方法，解压数据
-func (dp *DataPack) UnPack(binaryData []byte) (ziface.IMessage, error) {
+func (dp *DataPack) Unpack(binaryData []byte) (ziface.IMessage, error) {
 	dataBuff := bytes.NewReader(binaryData)
 	msg := &Message{}
 

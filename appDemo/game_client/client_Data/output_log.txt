@@ -1,0 +1,205 @@
+Initialize engine version: 5.4.1f1 (649f48bbbf0f)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: Intel(R) HD Graphics 630 (ID=0x5912)
+    Vendor:   Intel
+    VRAM:     2111 MB
+Begin MonoManager ReloadAssembly
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Google.Protobuf.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Google.Protobuf.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\protobuf-net.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\protobuf-net.dll into Unity Child Domain
+- Completed reload, in  0.051 seconds
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\System.dll (this message is harmless)
+desktop: 1920x1080 59Hz; virtual: 3840x1080 at -1920,0
+<RI> Initializing input.
+XInput1_3.dll not found. Trying XInput9_1_0.dll instead...
+<RI> Input initialized.
+<RI> Initialized touch support.
+Initialize engine version: 5.4.1f1 (649f48bbbf0f)
+GfxDevice: creating device client; threaded=1
+UnloadTime: 0.809200 ms
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: Intel(R) HD Graphics 630 (ID=0x5912)
+    Vendor:   Intel
+    VRAM:     2111 MB
+Begin MonoManager ReloadAssembly
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Google.Protobuf.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\Google.Protobuf.dll into Unity Child Domain
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\protobuf-net.dll (this message is harmless)
+Loading D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\protobuf-net.dll into Unity Child Domain
+- Completed reload, in  0.052 seconds
+Setting up 1 worker threads for Enlighten.
+  Thread -> id: 2a1c -> priority: 1 
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: D:\GoProject\GolangServerBasedZinx\appDemo\game_client\client_Data\Managed\System.dll (this message is harmless)
+desktop: 1920x1080 59Hz; virtual: 3840x1080 at -1920,0
+<RI> Initializing input.
+XInput1_3.dll not found. Trying XInput9_1_0.dll instead...
+<RI> Input initialized.
+<RI> Initialized touch support.
+UnloadTime: 0.746200 ms
+Setting up 1 worker threads for Enlighten.
+  Thread -> id: 2c18 -> priority: 1 
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 3.029000 ms
+
+Unloading 11 unused Assets to reduce memory usage. Loaded Objects now: 368.
+Total: 0.437000 ms (FindLiveObjects: 0.042900 ms CreateObjectMapping: 0.013300 ms MarkObjects: 0.199900 ms  DeleteObjects: 0.180200 ms)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Connect: 192.168.110.196:8999
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Connect Suc
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+PlayerController singleton already created!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Player: { "pid": 1 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+202 count:　1
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Start Game
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 2.976000 ms
+
+Unloading 11 unused Assets to reduce memory usage. Loaded Objects now: 368.
+Total: 0.431200 ms (FindLiveObjects: 0.021400 ms CreateObjectMapping: 0.010800 ms MarkObjects: 0.200000 ms  DeleteObjects: 0.198400 ms)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Connect: 192.168.110.196:8999
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Connect Suc
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+PlayerController singleton already created!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Player: { "pid": 2 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+202 count:　1
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Start Game
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+born player: 2 pos: { "x": 196.414886, "y": 0.0599999428, "z": 138.974228 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+born player: 1 pos: { "x": 196.489578, "y": 0.0599999428, "z": 122.804436 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Move over
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Plalayery 2 er: 1 leave hooem
+ 
+ 
+(Filename: C:/builds:a/buildsl/bu/uiild/auild/arts/getefactsa/generated/commom/re/UimenityEnEgineDDebugBiidindings.gen.cpin : 4Lin
+
+e: 42)
+
+born player: 2 pos: { "x": 195.696884, "y": 0.060000062, "z": 138.9559 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+born player: 1 pos: { "x": 196.489578, "y": 0.0599999428, "z": 122.804436 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Player: 1 llayer:ome
+ 
+(2i leave ho:/buildmlav
+ 
+(Filyename: C:/builds/generalave/unity/buntime/uild/artifacts/gBinerateddings.g/runtiee/UcityEngpp Line: 42)
+
+dings.gen.cpp Line: 42)
+
+born player: 2 pos: { "x": 195.696884, "y": 0.060000062, "z": 138.9596 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+born player: 1 pos: { "x": 196.489578, "y": 0.0599999428, "z": 122.804436 }
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Parent of RectTransform is being set with parent property. Consider using the SetParent method instead, with the worldPositionStays argument set to false. This will retain local orientation and scale rather than world orientation and scale, which can prevent common UI scaling issues.
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Move over
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+
+Player: 2 leave home
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 42)
+

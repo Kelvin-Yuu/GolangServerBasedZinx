@@ -6,7 +6,7 @@ WORKDIR /app
 
 ADD . /app
 
-RUN go build -o Server ./myDemo/ZinxV1.0/Server/Server.go
+RUN go build -o Server ./myStudyDemo/ZinxV1.0/Server/Server.go
 
 EXPOSE 8080
 

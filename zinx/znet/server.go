@@ -235,7 +235,48 @@ func (s *Server) ListenTcpConn() {
 }
 
 func (s *Server) ListenWebsocketConn() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		//1. 设置服务器最大连接限制，如果超过最大连接，则等待
+		if s.ConnMgr.Len() >= zconf.GlobalObject.MaxConn {
+			zlog.Ins().InfoF("Exceeded the maxConnNum:%d, Wait:%d", zconf.GlobalObject.MaxConn, AcceptDelay.duration)
+			AcceptDelay.Delay()
+			return
+		}
+		//2. 如果需要websocket认证，请设置认证信息
+		if s.websocketAuth != nil {
+			err := s.websocketAuth(r)
+			if err != nil {
+				zlog.Ins().ErrorF(" websocket auth err:%v", err)
+				w.WriteHeader(401)
+				AcceptDelay.Delay()
+				return
+			}
+		}
+		//3. 判断 header里是有子协议
+		if len(r.Header.Get("Sec-Websocket-Protocol")) > 0 {
+			s.upgrader.Subprotocols = websocket.Subprotocols(r)
+		}
 
+		//4. 升级为websocket连接
+		conn, err := s.upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			zlog.Ins().ErrorF("new websocket err:%v", err)
+			w.WriteHeader(500)
+			AcceptDelay.Delay()
+			return
+		}
+		AcceptDelay.Delay()
+
+		//5. 处理该新连接请求的业务方法， 此时应该有 handler 和 conn 是绑定的
+		newCid := atomic.AddUint64(&s.cID, 1)
+		wsConn := newWebsocketConn(s, conn, newCid)
+		go s.StartConn(wsConn)
+	})
+
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.IP, s.WsPort), nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *Server) ListenKcpConn() {
@@ -301,7 +342,7 @@ func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 		panic("Serve RouterSlicesMode is TRUE!! ")
 	}
 	s.msgHandler.AddRouter(msgID, router)
-	fmt.Println("Add Router [MsgID =", msgID, "] Successed!")
+	zlog.Ins().InfoF("Add Router [MsgID = %v] Successed!", msgID)
 }
 
 func (s *Server) AddRouterSlices(msgId uint32, router ...ziface.RouterHandler) ziface.IRouterSlices {

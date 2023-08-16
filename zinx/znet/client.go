@@ -124,7 +124,7 @@ func (c *Client) Restart() {
 				c.ErrChan <- err
 				return
 			}
-			zlog.Ins().ErrorF("WsClient err:%v", wsConn)
+			c.conn = newWsClientConn(c, wsConn)
 		default:
 			var conn net.Conn
 			var err error

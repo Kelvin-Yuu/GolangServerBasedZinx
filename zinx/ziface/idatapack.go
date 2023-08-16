@@ -13,7 +13,7 @@ type IDataPack interface {
 	Pack(msg IMessage) ([]byte, error)
 
 	//拆包方式
-	UnPack([]byte) (IMessage, error)
+	Unpack([]byte) (IMessage, error)
 }
 
 const (

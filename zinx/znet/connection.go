@@ -168,7 +168,7 @@ func (c *Connection) StartReader() {
 				return
 			}
 			zlog.Ins().DebugF("read buffer %s \n", hex.EncodeToString(buffer[0:n]))
-
+			//zlog.Ins().DebugF("read buffer %s \n", string(buffer[0:n]))
 			// 正常读取到对端数据，更新心跳检测Active状态
 			if n > 0 && c.hc != nil {
 				c.updateActivity()
@@ -183,12 +183,14 @@ func (c *Connection) StartReader() {
 				}
 				for _, bytes := range bufArrays {
 					msg := zpack.NewMessage(uint32(len(bytes)), bytes)
+					zlog.Ins().DebugF("[Server read msg] %v \n", msg)
 					// 得到当前客户端请求的Request数据
 					req := NewRequest(c, msg)
 					c.msgHandler.Execute(req)
 				}
 			} else {
 				msg := zpack.NewMessage(uint32(n), buffer[0:n])
+				zlog.Ins().DebugF("[Server read msg] %v \n", msg)
 				// 得到当前客户端请求的Request数据
 				req := NewRequest(c, msg)
 				c.msgHandler.Execute(req)
@@ -417,6 +419,10 @@ func (c *Connection) SetProperty(key string, value interface{}) {
 	defer c.propertyLock.Unlock()
 
 	//添加一个链接属性
+	if c.property == nil {
+		c.property = make(map[string]interface{})
+	}
+
 	c.property[key] = value
 }
 
@@ -427,9 +433,9 @@ func (c *Connection) GetProperty(key string) (interface{}, error) {
 
 	if value, ok := c.property[key]; ok {
 		return value, nil
-	} else {
-		return nil, errors.New("no property found!")
 	}
+
+	return nil, errors.New("no property found")
 }
 
 // 移除链接属性

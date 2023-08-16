@@ -34,7 +34,7 @@ func TestDataPack(t *testing.T) {
 						fmt.Println("read head err:", err)
 					}
 					// 2. 解包包头
-					msgHead, err := dp.UnPack(headData)
+					msgHead, err := dp.Unpack(headData)
 					if err != nil {
 						fmt.Println("server unpack err:", err)
 						return
